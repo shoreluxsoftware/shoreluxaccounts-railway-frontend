@@ -69,12 +69,12 @@ const generateBillPDF = (booking) => {
       doc.setFontSize(20); doc.setFont("helvetica", "bold"); doc.text('SHORELUX HOTELS', 60, 22);
       doc.setFontSize(10); doc.setFont("helvetica", "normal"); 
       doc.text('Beach Resort - Kovalam, Trivandrum', 60, 30);
-      doc.text('info@shoreluxbeachresort.com  ||  +91 98953 87828', 60, 37);
+      doc.text('info@shoreluxbeachresort.com  ||  +91 9656500755', 60, 37);
     } else {
       doc.setFontSize(24); doc.setFont("helvetica", "bold"); doc.text('SHORELUX HOTELS', 105, 20, { align: 'center' });
       doc.setFontSize(12); doc.setFont("helvetica", "italic");
       doc.text('Beach Resort - Kovalam, Trivandrum', 105, 30, { align: 'center' });
-      doc.text('info@shoreluxbeachresort.com  ||  +91 98953 87828', 105, 37, { align: 'center' });
+      doc.text('info@shoreluxbeachresort.com  ||  +91 9656500755', 105, 37, { align: 'center' });
     }
 
     doc.setLineWidth(1); doc.line(20, 45, 190, 45);
@@ -112,7 +112,7 @@ const generateBillPDF = (booking) => {
     // ⭐ GSTIN Number
     doc.setFont("helvetica", "bold"); doc.text('GSTIN', 20, startY);
     doc.setFont("helvetica", "normal"); doc.text(':', COLON_X, startY);
-    doc.text(String(booking.gstin || '32ABCDE1234F1Z5'), VALUE_X, startY); 
+    doc.text(String(booking.gstin || '32AAXFV5814CIZI'), VALUE_X, startY); 
     startY += 8;
 
     // ⭐ GST Percentage 🔥 NEW

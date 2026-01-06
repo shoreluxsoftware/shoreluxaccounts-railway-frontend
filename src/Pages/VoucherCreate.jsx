@@ -110,7 +110,7 @@ const downloadVoucherPDF = (voucher) => {
         doc.setFontSize(10); 
         doc.setFont("helvetica", "normal"); 
         doc.text('Beach Resort - Kovalam, Trivandrum', 60, 30);
-        doc.text('info@shoreluxbeachresort.com  ||  +91 98953 87828', 60, 37);
+        doc.text('info@shoreluxbeachresort.com  ||  +91 9656500755', 60, 37);
         
         // Header underline
         doc.setDrawColor(200);
@@ -130,7 +130,7 @@ const downloadVoucherPDF = (voucher) => {
         doc.setFontSize(12); 
         doc.setFont("helvetica", "italic");
         doc.text('Beach Resort - Kovalam, Trivandrum', 105, 30, { align: 'center' });
-        doc.text('info@shoreluxbeachresort.com  ||  +91 98953 87828', 105, 37, { align: 'center' });
+        doc.text('info@shoreluxbeachresort.com  ||  +91 9656500755', 105, 37, { align: 'center' });
         
         // Header underline
         doc.setDrawColor(200);
