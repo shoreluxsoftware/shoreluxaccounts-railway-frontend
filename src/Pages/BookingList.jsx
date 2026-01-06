@@ -112,7 +112,7 @@ const generateBillPDF = (booking) => {
     // ⭐ GSTIN Number
     doc.setFont("helvetica", "bold"); doc.text('GSTIN', 20, startY);
     doc.setFont("helvetica", "normal"); doc.text(':', COLON_X, startY);
-    doc.text(String(booking.gstin || '32AAXFV5814CIZI'), VALUE_X, startY); 
+    doc.text(String(booking.gstin || '32AAXFV5814C1Z1'), VALUE_X, startY); 
     startY += 8;
 
     // ⭐ GST Percentage 🔥 NEW
