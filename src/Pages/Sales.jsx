@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 // Import Lucide icons for a professional look
-import { Search, X, AlertCircle, CheckCircle } from "lucide-react"; 
+import { Search, X, AlertCircle, CheckCircle, Calendar } from "lucide-react"; 
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
 
-// --- TOAST Component (Copied from OtherIncome) ---
+// --- TOAST Component ---
 const ToastMessage = ({ message, type, onClose }) => {
   const isError = type === "error";
   const baseClasses =
@@ -29,6 +29,10 @@ const ToastMessage = ({ message, type, onClose }) => {
 const Sales = () => {
   const todayDateStr = new Date().toISOString().split("T")[0];
 
+  // 1. Determine if user is Admin
+  const userRole = localStorage.getItem("role")?.toLowerCase(); 
+  const isAdmin = userRole === "ADMIN";
+
   const [form, setForm] = useState({
     date: todayDateStr,
     amount: "",
@@ -42,18 +46,16 @@ const Sales = () => {
   const [otpLoading, setOtpLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [sortOption, setSortOption] = useState("date_newest");
-  // editIndex stores the index in the original `sales` array
   const [editIndex, setEditIndex] = useState(null); 
   const [otpModalVisible, setOtpModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [otp, setOtp] = useState("");
   const [editForm, setEditForm] = useState(null);
-
-  // Use the new Toast state
   const [toast, setToast] = useState(null);
+
   const showToast = useCallback((message, type = "success") => {
     setToast({ message, type });
-    setTimeout(() => setToast(null), 4000); // Increased duration for better visibility
+    setTimeout(() => setToast(null), 4000);
   }, []);
 
   const getAuthHeaders = () => {
@@ -78,15 +80,12 @@ const Sales = () => {
     return response.json();
   };
 
-  // Fetch sales data
   const fetchSales = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(
         `${API_BASE_URL}/staff-management/list-sales-income`,
-        {
-          headers: getAuthHeaders(),
-        }
+        { headers: getAuthHeaders() }
       );
 
       if (!response.ok) {
@@ -101,7 +100,6 @@ const Sales = () => {
       const result = await response.json();
       setSales(result.data || []);
       setError("");
-      showToast("Sales records loaded", "success");
     } catch (err) {
       console.error("Fetch sales error:", err);
       setError("Failed to load sales data");
@@ -115,14 +113,12 @@ const Sales = () => {
     fetchSales();
   }, [fetchSales]);
 
-  // Handle form input changes for create
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
     if (error) setError("");
   };
 
-  // Handle create sale submit
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -152,7 +148,6 @@ const Sales = () => {
       );
 
       const result = await handleApiResponse(response);
-
       await fetchSales();
       setForm({
         date: todayDateStr,
@@ -160,7 +155,7 @@ const Sales = () => {
         description: "",
         category: "Cafeteria",
       });
-      showToast(`Sale '${result.data.description.substring(0, 30)}...' created!`, "success");
+      showToast("Sale record created successfully!", "success");
     } catch (err) {
       console.error("Create sale error:", err);
       setError(err.message || "Failed to create sale");
@@ -170,8 +165,8 @@ const Sales = () => {
     }
   };
 
-  // Check if sale is editable (date today or within 2 days)
   const isEditable = (saleDate) => {
+    if (isAdmin) return true; // Admins can always edit (Logic depends on your backend)
     const sale = new Date(saleDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -180,7 +175,6 @@ const Sales = () => {
     return diffDays >= 0 && diffDays <= 2;
   };
 
-  // Filter + sort + index-based table
   const filteredSales = useMemo(() => {
     const text = search.toLowerCase();
     return [...sales]
@@ -194,10 +188,9 @@ const Sales = () => {
       });
   }, [sales, search, sortOption]);
 
-  // Handle Edit button click - request OTP if editable
   const handleEditClick = async (filteredIndex) => {
     const sale = filteredSales[filteredIndex];
-    if (!isEditable(sale.date)) {
+    if (!isAdmin && !isEditable(sale.date)) {
       setError("Editing allowed only for sales up to 2 days old.");
       return;
     }
@@ -220,21 +213,17 @@ const Sales = () => {
       );
 
       await handleApiResponse(response);
-      // find real index in `sales` array
       const originalIndex = sales.findIndex((s) => s.id === sale.id);
       setEditIndex(originalIndex);
       setOtpModalVisible(true);
-      showToast("OTP sent to admin number", "success");
+      showToast("OTP sent to admin mail", "success");
     } catch (err) {
-      console.error("Request OTP error:", err);
-      setEditIndex(null);
       showToast(err.message || "Failed to request OTP", "error");
     } finally {
       setOtpLoading(false);
     }
   };
 
-  // Verify OTP: call backend, then open edit modal
   const handleVerifyOtp = async () => {
     if (!otp.trim()) {
       setError("Please enter OTP.");
@@ -258,51 +247,34 @@ const Sales = () => {
       );
 
       const result = await handleApiResponse(response);
-      if (!result.verified) {
-        throw new Error("OTP not verified");
-      }
+      if (!result.verified) throw new Error("OTP not verified");
 
       setOtpModalVisible(false);
       setOtp("");
       setEditForm({ ...sales[editIndex] });
       setEditModalVisible(true);
-      showToast("OTP verified. You can edit now.", "success");
     } catch (err) {
-      console.error("Verify OTP error:", err);
       setError(err.message || "OTP verification failed");
-      showToast(`OTP verification failed: ${err.message}`, "error");
     } finally {
       setOtpLoading(false);
     }
   };
 
-  // Handle edit form change
   const handleEditChange = (e) => {
     const { name, value } = e.target;
     setEditForm({ ...editForm, [name]: value });
-    if (error) setError("");
   };
 
-  // Save updated sale data
   const handleEditSubmit = async (e) => {
     e.preventDefault();
-
-    if (
-      !editForm.amount ||
-      !editForm.description.trim() ||
-      parseFloat(editForm.amount) <= 0
-    ) {
-      setError("Please fill amount and description with valid amount (> 0).");
-      return;
-    }
-
-    setError("");
     setLoading(true);
 
     const payload = {
       amount: parseFloat(editForm.amount),
       description: editForm.description.trim(),
       category: editForm.category,
+      // Admin might want to change date during edit too
+      ...(isAdmin && { date: editForm.date }) 
     };
 
     try {
@@ -316,26 +288,17 @@ const Sales = () => {
       );
 
       await handleApiResponse(response);
-
       await fetchSales();
-      setEditForm(null);
-      setEditIndex(null);
       setEditModalVisible(false);
       showToast("Sale updated successfully!", "success");
     } catch (err) {
-      console.error("Update sale error:", err);
-      setError(err.message || "Failed to update sale");
-      showToast(`Update failed: ${err.message}`, "error");
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // Cancel editing / OTP
   const cancelEdit = () => {
-    setEditForm(null);
-    setEditIndex(null);
-    setOtp("");
     setOtpModalVisible(false);
     setEditModalVisible(false);
     setError("");
@@ -346,18 +309,14 @@ const Sales = () => {
       {/* LEFT FORM */}
       <form
         onSubmit={handleSubmit}
-        className="bg-white border border-gray-300 rounded-xl p-8 shadow-md w-full max-w-lg flex flex-col"
+        className="bg-white border border-gray-300 rounded-xl p-8 shadow-md w-full max-w-lg flex flex-col h-fit"
       >
-        <h2 className="text-xl font-semibold mb-6">Add Sale</h2>
+        <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold">Add Sale</h2>
+            {isAdmin && <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-1 rounded-full uppercase font-bold tracking-wider">Admin Access</span>}
+        </div>
 
-        {error && (
-          <p className="text-red-600 text-sm mb-4 p-2 bg-red-50 rounded">
-            {error}
-          </p>
-        )}
-        {loading && (
-          <p className="text-blue-600 text-sm mb-4">Processing...</p>
-        )}
+        {error && <p className="text-red-600 text-sm mb-4 p-2 bg-red-50 rounded">{error}</p>}
 
         <div className="flex gap-3 mb-6">
           <div className="flex-1">
@@ -366,14 +325,17 @@ const Sales = () => {
               type="date"
               value={form.date}
               name="date"
-              disabled
-              className="w-full border-b-2 border-dotted border-black p-2 bg-gray-200 text-sm"
+              onChange={handleChange}
+              // ENABLED FOR ADMIN, DISABLED FOR STAFF
+              disabled={!isAdmin || loading}
+              className={`w-full border-b-2 border-dotted border-black p-2 text-sm transition-colors ${
+                !isAdmin ? "bg-gray-200 cursor-not-allowed" : "bg-transparent hover:border-solid cursor-pointer"
+              }`}
             />
+            {!isAdmin && <p className="text-[10px] text-gray-500 mt-1">Staff: Today's date only</p>}
           </div>
           <div className="flex-1">
-            <label className="text-sm font-medium block mb-1">
-              Category *
-            </label>
+            <label className="text-sm font-medium block mb-1">Category *</label>
             <input
               type="text"
               value="Cafeteria"
@@ -389,22 +351,18 @@ const Sales = () => {
           name="amount"
           value={form.amount}
           onChange={handleChange}
-          min="0.01"
-          step="0.01"
           placeholder="Enter amount..."
-          className="w-full border-b-2 border-dotted border-black p-2 bg-transparent text-sm mb-6"
+          className="w-full border-b-2 border-dotted border-black p-2 bg-transparent text-sm mb-6 focus:border-solid outline-none"
           disabled={loading}
         />
 
-        <label className="text-sm font-medium block mb-1">
-          Description *
-        </label>
+        <label className="text-sm font-medium block mb-1">Description *</label>
         <textarea
           name="description"
           value={form.description}
           onChange={handleChange}
           placeholder="Write short description..."
-          className="w-full border-b-2 border-dotted border-black p-2 text-sm h-20 bg-transparent mb-6 resize-none"
+          className="w-full border-b-2 border-dotted border-black p-2 text-sm h-20 bg-transparent mb-6 resize-none focus:border-solid outline-none"
           disabled={loading}
           rows="3"
         />
@@ -412,34 +370,30 @@ const Sales = () => {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-black text-white cursor-pointer py-2 mt-4 rounded-md hover:bg-gray-900 transition disabled:opacity-50"
+          className="w-full bg-black text-white cursor-pointer py-3 mt-4 rounded-md hover:bg-gray-900 transition disabled:opacity-50 font-medium"
         >
-          {loading ? "Creating..." : "Submit Sale"}
+          {loading ? "Processing..." : "Submit Sale"}
         </button>
       </form>
 
       {/* RIGHT TABLE */}
       <div className="flex-1">
-        <div className="flex justify-between mb-3">
-          <div className="relative w-1/2">
+        <div className="flex justify-between mb-3 gap-4">
+          <div className="relative flex-1">
             <input
               type="text"
               placeholder="Search description..."
-              className="border border-gray-400 rounded-md pl-10 pr-3 py-2 w-full"
+              className="border border-gray-400 rounded-md pl-10 pr-3 py-2 w-full bg-white"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <Search
-              size={18}
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500"
-            />
+            <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
           </div>
           <select
-            className="border border-gray-400 rounded-md px-3 py-2"
+            className="border border-gray-400 rounded-md px-3 py-2 bg-white text-sm"
             value={sortOption}
             onChange={(e) => setSortOption(e.target.value)}
           >
-            <option value="">Sort by</option>
             <option value="date_newest">Date (Newest → Oldest)</option>
             <option value="date_oldest">Date (Oldest → Newest)</option>
             <option value="amount_low">Amount (Low → High)</option>
@@ -447,72 +401,48 @@ const Sales = () => {
           </select>
         </div>
 
-        <div className="bg-white border border-gray-300 rounded-xl p-4 shadow-md overflow-auto max-h-[70vh]">
-          <h2 className="text-lg font-semibold mb-4 text-center">
-            Sales ({filteredSales.length})
-          </h2>
+        <div className="bg-white border border-gray-300 rounded-xl p-4 shadow-md overflow-auto max-h-[75vh]">
+          <h2 className="text-lg font-semibold mb-4 text-center">Sales Records ({filteredSales.length})</h2>
 
           <table className="w-full border-collapse text-sm">
             <thead className="bg-black text-white sticky top-0 z-10">
               <tr>
-                <th className="border p-3">ID</th>
-                <th className="border p-3">Date</th>
-                <th className="border p-3">Category</th>
-                <th className="border p-3">Amount (₹)</th>
-                <th className="border p-3 max-w-xs">Description</th>
-                <th className="border p-3">Actions</th>
+                <th className="border p-3 text-left">ID</th>
+                <th className="border p-3 text-left">Date</th>
+                <th className="border p-3 text-left">Category</th>
+                <th className="border p-3 text-left">Amount (₹)</th>
+                <th className="border p-3 text-left">Description</th>
+                <th className="border p-3 text-center">Actions</th>
               </tr>
             </thead>
-
             <tbody>
               {loading && sales.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="text-center py-8 text-blue-500">
-                    Loading sales...
-                  </td>
-                </tr>
+                <tr><td colSpan="6" className="text-center py-8 text-blue-500">Loading...</td></tr>
               ) : filteredSales.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="text-center py-8 text-gray-500">
-                    No sales recorded
-                  </td>
-                </tr>
+                <tr><td colSpan="6" className="text-center py-8 text-gray-500">No records found</td></tr>
               ) : (
                 filteredSales.map((sale, idx) => (
                   <tr key={sale.id} className="hover:bg-gray-50 border-b">
-                    {/* ID (Visual index only) */}
-                    <td className="border p-3 font-mono">{idx + 1}</td>
-
-                    <td className="border p-3">{sale.date}</td>
-
+                    <td className="border p-3 text-gray-500 font-mono">{idx + 1}</td>
+                    <td className="border p-3 whitespace-nowrap">{sale.date}</td>
                     <td className="border p-3">
-                      <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
+                      <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-[10px] font-bold uppercase">
                         {sale.category}
                       </span>
                     </td>
-
-                    <td className="border p-3 font-semibold text-green-700">
-                      ₹ {Number(sale.amount).toLocaleString("en-IN")}
-                    </td>
-
-                    <td
-                      className="border p-3 max-w-xs truncate"
-                      title={sale.description}
-                    >
-                      {sale.description}
-                    </td>
-
-                    <td className="border p-3">
+                    <td className="border p-3 font-bold text-green-700">₹ {Number(sale.amount).toLocaleString("en-IN")}</td>
+                    <td className="border p-3 max-w-xs truncate" title={sale.description}>{sale.description}</td>
+                    <td className="border p-3 text-center">
                       <button
                         onClick={() => handleEditClick(idx)}
-                        disabled={!isEditable(sale.date) || loading || otpLoading}
-                        className={`px-3 py-1 rounded text-xs font-medium cursor-pointer transition-all flex items-center gap-1 ${
-                          isEditable(sale.date)
-                            ? "bg-blue-600 text-white hover:bg-blue-700 shadow-md"
-                            : "bg-gray-400 text-gray-700 cursor-not-allowed"
-                        } ${otpLoading ? "opacity-70" : ""}`}
+                        disabled={(!isAdmin && !isEditable(sale.date)) || loading || otpLoading}
+                        className={`px-4 py-1.5 rounded text-xs font-bold transition-all ${
+                          isAdmin || isEditable(sale.date)
+                            ? "bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"
+                            : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                        }`}
                       >
-                        {isEditable(sale.date) ? "Edit" : "Too Old"}
+                        {isAdmin || isEditable(sale.date) ? "Edit" : "Locked"}
                       </button>
                     </td>
                   </tr>
@@ -523,135 +453,110 @@ const Sales = () => {
         </div>
       </div>
 
-      {/* OTP MODAL (Updated) */}
+      {/* OTP MODAL */}
       {otpModalVisible && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex justify-center items-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-2xl">
-            <h3 className="text-xl font-semibold mb-4">
-              Enter OTP to Edit
-            </h3>
-            <p className="text-sm text-gray-600 mb-4">
-              OTP has been sent to admin Mail.
-            </p>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center p-4 z-[100]">
+          <div className="bg-white rounded-xl p-8 max-w-sm w-full shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="text-center mb-6">
+                <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <AlertCircle className="text-blue-600" size={32} />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900">Security Check</h3>
+                <p className="text-sm text-gray-500 mt-2">OTP sent to Administrator's email/phone.</p>
+            </div>
             <input
               type="text"
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
               maxLength={6}
-              className="w-full border border-gray-300 p-3 rounded-lg mb-6 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-lg tracking-widest font-mono"
-              placeholder="Enter OTP"
+              className="w-full border-2 border-gray-200 p-3 rounded-lg mb-6 focus:border-blue-500 outline-none text-center text-2xl tracking-[0.5em] font-bold"
+              placeholder="000000"
               autoFocus
             />
-            <div className="flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={cancelEdit}
-                className="px-6 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition text-sm"
-                disabled={otpLoading}
-              >
-                Cancel
-              </button>
+            <div className="flex flex-col gap-3">
               <button
                 onClick={handleVerifyOtp}
-                className="px-6 py-2 bg-green-600 text-white rounded-lg cursor-pointer hover:bg-green-700 transition text-sm font-medium disabled:opacity-60"
+                className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition"
                 disabled={otpLoading}
               >
-                {otpLoading ? "Verifying..." : "Verify OTP"}
+                {otpLoading ? "Verifying..." : "Verify & Unlock"}
+              </button>
+              <button
+                onClick={cancelEdit}
+                className="w-full py-2 text-gray-500 hover:text-gray-700 font-medium transition"
+              >
+                Cancel
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* EDIT MODAL (No changes, looks good) */}
+      {/* EDIT MODAL */}
       {editModalVisible && editForm && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex justify-center items-center p-4 z-50">
-          <div className="bg-white rounded-lg p-8 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-            <h2 className="text-xl font-semibold mb-6">
-              Edit Sale (ID: {editForm.id})
-            </h2>
-
-            {error && (
-              <p className="text-red-600 text-sm mb-4 p-2 bg-red-50 rounded">
-                {error}
-              </p>
-            )}
-            {loading && (
-              <p className="text-blue-600 text-sm mb-4">Updating...</p>
-            )}
-
-            <div className="flex gap-3 mb-6">
-              <div className="flex-1">
-                <label className="text-sm font-medium block mb-1">Date *</label>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center p-4 z-[100]">
+          <div className="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl overflow-y-auto max-h-[90vh]">
+            <h2 className="text-xl font-bold mb-6 border-b pb-4">Edit Sale Record</h2>
+            
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Date</label>
                 <input
                   type="date"
                   value={editForm.date}
-                  disabled
-                  className="w-full border-b-2 border-dotted border-black p-2 bg-gray-200 text-sm"
+                  name="date"
+                  onChange={handleEditChange}
+                  disabled={!isAdmin}
+                  className={`w-full border-b-2 p-2 text-sm ${isAdmin ? "border-blue-500" : "border-gray-200 bg-gray-50"}`}
                 />
               </div>
-              <div className="flex-1">
-                <label className="text-sm font-medium block mb-1">
-                  Category *
-                </label>
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Category</label>
                 <input
                   type="text"
                   value="Cafeteria"
                   disabled
-                  className="w-full border-b-2 border-dotted border-black p-2 bg-gray-200 text-sm"
+                  className="w-full border-b-2 border-gray-200 p-2 text-sm bg-gray-50"
                 />
               </div>
             </div>
 
-            <label className="text-sm font-medium block mb-1">Amount *</label>
+            <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Amount (₹)</label>
             <input
               type="number"
               name="amount"
               value={editForm.amount}
               onChange={handleEditChange}
-              min="0.01"
-              step="0.01"
-              placeholder="Enter amount..."
-              className="w-full border-b-2 border-dotted border-black p-2 bg-transparent text-sm mb-6"
-              disabled={loading}
+              className="w-full border-b-2 border-blue-500 p-2 text-lg font-bold mb-6 outline-none"
             />
 
-            <label className="text-sm font-medium block mb-1">
-              Description *
-            </label>
+            <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Description</label>
             <textarea
               name="description"
               value={editForm.description}
               onChange={handleEditChange}
-              placeholder="Write short description..."
-              className="w-full border-b-2 border-dotted border-black p-2 text-sm h-20 bg-transparent mb-6 resize-none"
-              disabled={loading}
-              rows="3"
+              className="w-full border-2 border-gray-100 rounded-lg p-3 text-sm h-32 mb-6 focus:border-blue-500 outline-none"
             />
 
-            <div className="flex gap-3">
+            <div className="flex gap-4">
               <button
-                type="button"
                 onClick={cancelEdit}
-                disabled={loading}
-                className="flex-1 bg-gray-500 text-white py-2 cursor-pointer rounded-md hover:bg-gray-700 transition disabled:opacity-50"
+                className="flex-1 py-3 border border-gray-300 rounded-lg font-bold hover:bg-gray-50"
               >
                 Cancel
               </button>
               <button
-                type="button"
                 onClick={handleEditSubmit}
-                disabled={loading}
-                className="flex-1 bg-green-600 text-white py-2 cursor-pointer rounded-md hover:bg-green-700 transition disabled:opacity-50"
+                className="flex-1 py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 shadow-lg shadow-green-200"
               >
-                {loading ? "Saving..." : "Save Changes"}
+                Save Changes
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* TOAST (Updated) */}
+      {/* TOAST NOTIFICATIONS */}
       {toast && (
         <ToastMessage
           message={toast.message}

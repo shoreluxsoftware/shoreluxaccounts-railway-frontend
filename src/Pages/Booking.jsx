@@ -682,7 +682,8 @@ const Booking = () => {
                 name="bookingDate"
                 type="date"
                 value={form.bookingDate}
-                readOnly
+                onChange={handleChange}
+                disabled={!isAdmin}
                 className="w-full border-b-2 border-dotted border-gray-500 px-0 py-1 text-sm bg-transparent focus:outline-none bg-gray-100 text-gray-700 cursor-not-allowed"
               />
             </div>

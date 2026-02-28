@@ -100,6 +100,10 @@ const exportToExcel = (filteredItems, showToast) => {
 };
 
 const StockManagement = () => {
+
+      const userRole = localStorage.getItem("role")?.toLowerCase(); 
+  const isAdmin = userRole === "ADMIN";
+
   // Default form structure for adding new items
   const initialFormState = {
     dateAdded: new Date().toISOString().split("T")[0], 

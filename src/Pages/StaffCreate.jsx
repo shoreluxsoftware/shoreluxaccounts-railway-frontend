@@ -112,6 +112,9 @@ const StaffCreate = () => {
   const token = localStorage.getItem("access_token");
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
+  const userRole = localStorage.getItem("role")?.toLowerCase(); 
+  const isAdmin = userRole === "ADMIN";
+
   const [showEnablePassword, setShowEnablePassword] = useState(false);
 
   // --- State Hooks ---
@@ -493,15 +496,16 @@ const LoginStatusBadge = ({ staff }) => {
         <h2 className="text-2xl font-semibold mb-8">Add Staff Member</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
           <div className="space-y-6">
-            <div>
-              <label className="block mb-1 text-sm font-medium">Date</label>
-              <input
-                type="date"
-                value={form.date}
-                readOnly disabled
-                className="w-full border-b-2 border-dotted border-black p-2 bg-gray-200 text-sm"
-              />
-            </div>
+<div>
+  <label className="block mb-1 text-sm font-medium">Date</label>
+  <input
+    type="date"
+    name="date"
+    value={form.date}
+    onChange={handleChange}
+    className="w-full border-b-2 border-dotted border-black p-2 bg-gray-200 text-sm"
+  />
+</div>
             <div>
               <label className="block mb-1 text-sm font-medium">Last Name *</label>
               <input

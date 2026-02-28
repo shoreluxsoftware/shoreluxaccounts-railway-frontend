@@ -29,6 +29,11 @@ const ToastMessage = ({ message, type, onClose }) => {
 };
 
 const VoucherCreate = () => {
+
+      const userRole = localStorage.getItem("role")?.toLowerCase(); 
+  const isAdmin = userRole === "ADMIN";
+
+
   const [vouchers, setVouchers] = useState([]);
   const [loadingVouchers, setLoadingVouchers] = useState(false);
   const [loadingCreate, setLoadingCreate] = useState(false);
@@ -371,8 +376,10 @@ const renderVoucherContent = (doc, voucher, startY) => {
               type="date"
               name="date"
               value={form.date}
-              disabled
+              onChange={handleChange}
+              disabled={!isAdmin || loading}
             />
+            {!isAdmin && <p className="text-[10px] text-gray-500 mt-1">Staff: Today's date only</p>}
           </div>
         </div>
 

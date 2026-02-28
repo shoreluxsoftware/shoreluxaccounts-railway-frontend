@@ -31,6 +31,10 @@ const ToastMessage = ({ message, type, onClose }) => {
 };
 
 const CafeExpense = () => {
+
+      const userRole = localStorage.getItem("role")?.toLowerCase(); 
+  const isAdmin = userRole === "ADMIN";
+
   const [form, setForm] = useState({
     date: new Date().toISOString().split("T")[0],
     amount: "",
@@ -496,9 +500,13 @@ const CafeExpense = () => {
               type="date"
               name="date"
               value={form.date}
-              disabled
-              className="w-full border-b-2 border-dotted border-black p-2 bg-gray-200 text-sm"
+              onChange={handleChange}
+              disabled={!isAdmin || loading}
+              className={`w-full border-b-2 border-dotted border-black p-2 text-sm transition-colors ${
+                !isAdmin ? "bg-gray-200 cursor-not-allowed" : "bg-transparent hover:border-solid cursor-pointer"
+              }`}
             />
+            {!isAdmin && <p className="text-[10px] text-gray-500 mt-1">Staff: Today's date only</p>}
           </div>
           <div className="flex-1">
             <label className="text-sm font-medium block mb-1">
@@ -805,10 +813,14 @@ const CafeExpense = () => {
                 <input
                   type="date"
                   value={editExpense.date}
-                  disabled
-                  className="w-full border-b-2 border-dotted border-black p-2 bg-gray-200 text-sm"
-                />
-              </div>
+                  onChange={handleChange}
+              disabled={!isAdmin || loading}
+              className={`w-full border-b-2 border-dotted border-black p-2 text-sm transition-colors ${
+                !isAdmin ? "bg-gray-200 cursor-not-allowed" : "bg-transparent hover:border-solid cursor-pointer"
+              }`}
+            />
+            {!isAdmin && <p className="text-[10px] text-gray-500 mt-1">Staff: Today's date only</p>}
+          </div>
               <div className="flex-1">
                 <label className="text-sm font-medium block mb-1">
                   Category <span className="text-xs text-gray-500">(Fixed)</span>
