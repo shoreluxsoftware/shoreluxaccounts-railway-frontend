@@ -377,7 +377,7 @@ const renderVoucherContent = (doc, voucher, startY) => {
               name="date"
               value={form.date}
               onChange={handleChange}
-              disabled={!isAdmin || loading}
+              disabled={!isAdmin}
             />
             {!isAdmin && <p className="text-[10px] text-gray-500 mt-1">Staff: Today's date only</p>}
           </div>
