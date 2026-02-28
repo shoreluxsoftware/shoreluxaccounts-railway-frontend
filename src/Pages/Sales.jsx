@@ -30,8 +30,8 @@ const Sales = () => {
   const todayDateStr = new Date().toISOString().split("T")[0];
 
   // 1. Determine if user is Admin
-  const userRole = localStorage.getItem("role")?.toLowerCase(); 
-  const isAdmin = userRole === "ADMIN";
+// final correct code
+const isAdmin = localStorage.getItem("role") === "ADMIN";
 
   const [form, setForm] = useState({
     date: todayDateStr,

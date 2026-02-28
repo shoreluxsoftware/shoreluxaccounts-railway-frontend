@@ -28,8 +28,8 @@ const ToastMessage = ({ message, type, onClose }) => {
 
 const Laundry = () => {
 
-      const userRole = localStorage.getItem("role")?.toLowerCase(); 
-  const isAdmin = userRole === "ADMIN";
+// final correct code
+const isAdmin = localStorage.getItem("role") === "ADMIN";
 
   const [sendForm, setSendForm] = useState({
     products: [{ item_id: "", quantity: "" }],

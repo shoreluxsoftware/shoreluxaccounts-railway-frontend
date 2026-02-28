@@ -43,8 +43,8 @@ const expenseCategories = [
 
 const Expenses = () => {
 
-    const userRole = localStorage.getItem("role")?.toLowerCase(); 
-  const isAdmin = userRole === "ADMIN";
+// final correct code
+const isAdmin = localStorage.getItem("role") === "ADMIN";
 
 
   const [form, setForm] = useState({
