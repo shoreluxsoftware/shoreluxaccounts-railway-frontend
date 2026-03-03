@@ -243,7 +243,7 @@ export default function DayBook() {
             <h3 className="text-sm font-medium text-gray-500 mb-2">Net Balance</h3>
             <p className={`text-2xl font-bold ${totals.finalBalance >= 0 ? "text-green-600" : "text-red-600"}`}>
               ₹{Math.abs(totals.finalBalance).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-              {totals.finalBalance < 0 ? " (Dr)" : " (Cr)"}
+              {totals.finalBalance < 0 ? "" : " "}
             </p>
           </div>
         </div>

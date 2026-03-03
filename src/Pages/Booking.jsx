@@ -126,7 +126,7 @@ const BookingTypeManagement = ({ bookingTypes, fetchBookingTypes, showToast, isA
         body: JSON.stringify({ 
           name: newTypeName.trim(),
           default_price: parseFloat(newTypePrice),
-          gst_percentage: parseFloat(newTypeGst)
+          gst_percentage: parseFloat(newTypeGst) / 100 
         }),
       });
 
@@ -163,7 +163,7 @@ const BookingTypeManagement = ({ bookingTypes, fetchBookingTypes, showToast, isA
         body: JSON.stringify({ 
           name: editName.trim(),
           default_price: parseFloat(editPrice),
-          gst_percentage: parseFloat(editGst)
+          gst_percentage: parseFloat(editGst) / 100
         }),
       });
 
@@ -457,22 +457,34 @@ const Booking = () => {
     setIsAdmin(role === "ADMIN");
   }, []);
 
-  const fetchBookingTypes = useCallback(async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/staff-management/list-booking-types`, {
-        headers: getAuthHeaders(),
-      });
-      const result = await response.json();
-      
-      if (!response.ok) throw new Error(result.error || "Failed to fetch types");
+const fetchBookingTypes = useCallback(async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/staff-management/list-booking-types`, {
+      headers: getAuthHeaders(),
+    });
+    const result = await response.json();
+    
+    if (!response.ok) throw new Error(result.error || "Failed to fetch types");
 
-      const types = result.data || [];
-      setBookingTypes(types);
-      
-    } catch (err) {
-      console.error("Fetch booking types error:", err);
+    const types = result.data || [];
+    setBookingTypes(types);
+
+    // 🔥 NEW: Auto-select the first item if available
+    if (types.length > 0) {
+      const firstType = types[0];
+      setForm(prev => ({
+        ...prev,
+        booking_type_id: firstType.id.toString(),
+        bookingPrice: firstType.default_price.toString(),
+        paidAmount: "", // Clear these for fresh selection
+        pendingAmount: firstType.default_price.toString()
+      }));
     }
-  }, []);
+    
+  } catch (err) {
+    console.error("Fetch booking types error:", err);
+  }
+}, []);
 
   const fetchInvoiceNumber = useCallback(async () => {
     try {
