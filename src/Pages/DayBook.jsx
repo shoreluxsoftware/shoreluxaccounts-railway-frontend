@@ -47,9 +47,14 @@ export default function DayBook() {
           throw new Error(`HTTP ${response.status}: ${text}`);
         }
         const result = await response.json();
+        
+        // Console log for debugging
+        console.log("Raw API Response:", result);
+
         const mapped = (result.data || []).map((e) => ({
           id: e.id,
           date: e.date,
+          source: e.source_type || "N/A", // Capturing the source type
           description: e.description,
           income: Number(e.credit || 0),
           expense: Number(e.debit || 0),
@@ -74,7 +79,9 @@ export default function DayBook() {
     const lower = search.toLowerCase();
     let filtered = entries.filter(
       (e) =>
-        e.description.toLowerCase().includes(lower) || e.date.includes(search)
+        e.description.toLowerCase().includes(lower) || 
+        e.date.includes(search) ||
+        e.source.toLowerCase().includes(lower)
     );
 
     switch (sortOption) {
@@ -108,7 +115,6 @@ export default function DayBook() {
     return { ...e, balance: runningBalance };
   });
 
-  // 🔥 NEW: Calculate totals
   const totals = useMemo(() => {
     const totalIncome = filteredEntries.reduce((sum, e) => sum + (e.income || 0), 0);
     const totalExpense = filteredEntries.reduce((sum, e) => sum + (e.expense || 0), 0);
@@ -116,19 +122,25 @@ export default function DayBook() {
     return { totalIncome, totalExpense, finalBalance };
   }, [filteredEntries, entriesWithBalance]);
 
+  // Utility to format source names nicely
+  const formatSource = (src) => {
+    return src.replace(/expense|income/gi, (match) => ` ${match}`).trim().replace(/^\w/, (c) => c.toUpperCase());
+  };
+
   const exportExcel = () => {
     const wsData = [
       ["DAYBOOK REPORT"],
       [`Date: ${date}`],
       [`Generated: ${new Date().toLocaleDateString()}`],
       [],
-      ["#", "Date", "Description", "Income (₹)", "Expense (₹)", "Balance (₹)"]
+      ["#", "Date", "Source", "Description", "Income (₹)", "Expense (₹)", "Balance (₹)"]
     ];
 
     entriesWithBalance.forEach((entry, index) => {
       wsData.push([
         index + 1,
         entry.date,
+        formatSource(entry.source),
         entry.description,
         entry.income ? entry.income.toFixed(2) : 0,
         entry.expense ? entry.expense.toFixed(2) : 0,
@@ -136,14 +148,14 @@ export default function DayBook() {
       ]);
     });
 
-    // 🔥 Add totals row
     wsData.push([]);
-    wsData.push(["", "", "TOTAL", totals.totalIncome.toFixed(2), totals.totalExpense.toFixed(2), totals.finalBalance.toFixed(2)]);
+    wsData.push(["", "", "", "TOTAL", totals.totalIncome.toFixed(2), totals.totalExpense.toFixed(2), totals.finalBalance.toFixed(2)]);
 
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     const colWidths = [
       { wch: 8 },  // #
       { wch: 12 }, // Date
+      { wch: 15 }, // Source
       { wch: 40 }, // Description
       { wch: 12 }, // Income
       { wch: 12 }, // Expense
@@ -152,7 +164,7 @@ export default function DayBook() {
     ws['!cols'] = colWidths;
 
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "DayBook");
+    XLSUtils.book_append_sheet(wb, ws, "DayBook");
     XLSX.writeFile(wb, `DayBook_${date}.xlsx`);
     showToast("Excel exported successfully!");
   };
@@ -182,7 +194,7 @@ export default function DayBook() {
           />
           <input
             type="text"
-            placeholder="Search by date or description..."
+            placeholder="Search entries..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="border border-gray-400 rounded-md px-4 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-purple-600"
@@ -208,12 +220,11 @@ export default function DayBook() {
             disabled={entriesWithBalance.length === 0 || loading}
             className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 flex items-center gap-2 text-sm font-medium"
           >
-            Download as Excel
+            Download Excel
           </button>
         </div>
       </div>
 
-      {/* 🔥 NEW: Totals Cards */}
       {entriesWithBalance.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
@@ -230,10 +241,9 @@ export default function DayBook() {
           </div>
           <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
             <h3 className="text-sm font-medium text-gray-500 mb-2">Net Balance</h3>
-            <p className={`text-2xl font-bold ${
-              totals.finalBalance >= 0 ? "text-green-600" : "text-red-600"
-            }`}>
-              ₹{Number(totals.finalBalance).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+            <p className={`text-2xl font-bold ${totals.finalBalance >= 0 ? "text-green-600" : "text-red-600"}`}>
+              ₹{Math.abs(totals.finalBalance).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+              {totals.finalBalance < 0 ? " (Dr)" : " (Cr)"}
             </p>
           </div>
         </div>
@@ -248,6 +258,7 @@ export default function DayBook() {
               <tr>
                 <th className="border p-3 text-sm">#</th>
                 <th className="border p-3 text-sm">Date</th>
+                <th className="border p-3 text-sm">Source</th>
                 <th className="border p-3 text-sm">Description</th>
                 <th className="border p-3 text-sm text-right">Income (₹)</th>
                 <th className="border p-3 text-sm text-right">Expense (₹)</th>
@@ -257,28 +268,27 @@ export default function DayBook() {
             <tbody>
               {entriesWithBalance.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={6}
-                    className="text-center py-6 text-gray-500 text-sm"
-                  >
+                  <td colSpan={7} className="text-center py-6 text-gray-500 text-sm">
                     No entries found
                   </td>
                 </tr>
               ) : (
                 entriesWithBalance.map(
-                  ({ id, date, description, income, expense, balance }, index) => (
-                    <tr
-                      key={id}
-                      className="hover:bg-purple-50 transition duration-150"
-                    >
+                  ({ id, date, source, description, income, expense, balance }, index) => (
+                    <tr key={id} className="hover:bg-purple-50 transition duration-150">
                       <td className="border p-3 text-sm">{index + 1}</td>
-                      <td className="border p-3 text-sm">{date}</td>
+                      <td className="border p-3 text-sm whitespace-nowrap">{date}</td>
+                      <td className="border p-3 text-sm">
+                        <span className="px-2 py-1 bg-gray-100 rounded text-xs font-semibold uppercase text-gray-600">
+                          {formatSource(source)}
+                        </span>
+                      </td>
                       <td className="border p-3 text-sm">{description}</td>
                       <td className="border p-3 text-sm text-right text-green-700 font-semibold">
-                        {income ? income.toFixed(2) : "-"}
+                        {income > 0 ? income.toFixed(2) : "-"}
                       </td>
                       <td className="border p-3 text-sm text-right text-red-600 font-semibold">
-                        {expense ? expense.toFixed(2) : "-"}
+                        {expense > 0 ? expense.toFixed(2) : "-"}
                       </td>
                       <td className="border p-3 text-sm text-right font-bold">
                         {balance.toFixed(2)}
