@@ -379,16 +379,14 @@ const handleDeleteExpense = async (expense) => {
   }, [fetchExpenses]);
 
   // 🔥 HANDLE EDIT CLICK - STARTS OTP FLOW
-const handleEditClick = async (exp) => {
-  console.log("🔍 Edit clicked for:", exp.id, exp.category);
+  const handleEditClick = async (exp) => {
+    console.log("🔍 Edit clicked for:", exp.id, exp.category, exp);
 
-  if (!isAdmin && !isEditable(exp.date)) {
-    showToast("Editing allowed only for expenses up to 2 days old", "error");
-    return;
-  }
+    if (!isEditable(exp.date)) {
+      showToast("Editing allowed only for expenses up to 2 days old", "error");
+      return;
+    }
 
-  // 🔥 ADMIN: Direct to edit modal (NO OTP)
-  if (isAdmin) {
     setEditExpense({
       id: exp.id,
       date: exp.date,
@@ -400,44 +398,38 @@ const handleEditClick = async (exp) => {
       voucher_file: exp.voucher_file,
       voucher_no: exp.voucher_no || "",
     });
-    setEditModalVisible(true);
-    showToast("Admin: Direct edit mode", "success");
-    return;
-  }
 
-  // 🔥 STAFF: Normal OTP flow (keep existing code)
-  setError("");
-  setOtp("");
-  setOtpLoading(true);
+    setError("");
+    setOtp("");
+    setOtpLoading(true);
 
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/admin-management/request-otp`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeaders(),
-        },
-        body: JSON.stringify({
-          verification_type: "expense_edit",
-          object_id: exp.id,
-          category: exp.category,
-        }),
-      }
-    );
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/admin-management/request-otp`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeaders(),
+          },
+          body: JSON.stringify({
+            verification_type: "expense_edit",
+            object_id: exp.id,
+            category: exp.category,
+          }),
+        }
+      );
 
-    const result = await handleJsonOrError(response);
-    showToast(result.message || "OTP sent to admin email", "success");
-    setOtpModalVisible(true);
-  } catch (err) {
-    console.error("Request OTP error:", err);
-    showToast(err.message || "Failed to request OTP", "error");
-  } finally {
-    setOtpLoading(false);
-  }
-};
-
+      const result = await handleJsonOrError(response);
+      showToast(result.message || "OTP sent to admin email", "success");
+      setOtpModalVisible(true);
+    } catch (err) {
+      console.error("Request OTP error:", err);
+      showToast(err.message || "Failed to request OTP", "error");
+    } finally {
+      setOtpLoading(false);
+    }
+  };
 
   // 🔥 VERIFY OTP -> OPEN EDIT MODAL
   const handleVerifyOtp = async () => {
@@ -851,28 +843,19 @@ const handleEditClick = async (exp) => {
 <td className="border p-3">
   <div className="flex gap-1">
     {/* 🔥 EXISTING EDIT BUTTON */}
-<button
-  type="button"
-  onClick={() => handleEditClick(exp)}
-  disabled={(!isAdmin && !isEditable(exp.date)) || loading || otpLoading}
-  className={`px-3 py-1 rounded text-xs cursor-pointer font-medium transition-all flex items-center gap-1 ${
-    isAdmin 
-      ? "bg-green-600 text-white hover:bg-green-700 shadow-md"  // 🔥 Admin = Green
-      : isEditable(exp.date)
-      ? "bg-blue-600 text-white hover:bg-blue-700 shadow-md"    // Staff = Blue (OTP)
-      : "bg-gray-400 text-gray-700 cursor-not-allowed"
-  } ${otpLoading ? "opacity-70" : ""}`}
-  title={
-    isAdmin 
-      ? "Admin: Direct edit (No OTP)" 
-      : !isEditable(exp.date) 
-      ? "Only 2 days old expenses editable" 
-      : "Staff: OTP required"
-  }
->
-  {isAdmin ? "Edit (Admin)" : isEditable(exp.date) ? "Edit" : "Too Old"}
-</button>
-
+    <button
+      type="button"
+      onClick={() => handleEditClick(exp)}
+      disabled={!isEditable(exp.date) || loading || otpLoading}
+      className={`px-3 py-1 rounded text-xs cursor-pointer font-medium transition-all flex items-center gap-1 ${
+        isEditable(exp.date)
+          ? "bg-blue-600 text-white hover:bg-blue-700 shadow-md"
+          : "bg-gray-400 text-gray-700 cursor-not-allowed"
+      } ${otpLoading ? "opacity-70" : ""}`}
+      title={!isEditable(exp.date) ? "Only 2 days old expenses editable" : ""}
+    >
+      {isEditable(exp.date) ? "Edit" : "Too Old"}
+    </button>
     
     {/* 🔥 NEW DELETE BUTTON - ADMIN ONLY */}
     {isAdmin && (
