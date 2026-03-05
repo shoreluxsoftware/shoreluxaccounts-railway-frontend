@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Search, X, AlertCircle, CheckCircle } from 'lucide-react';
+import { Search, X, AlertCircle, CheckCircle, Trash2 } from 'lucide-react';
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -29,15 +29,16 @@ const ToastMessage = ({ message, type, onClose }) => {
 };
 
 const VoucherCreate = () => {
-
-// final correct code
-const isAdmin = localStorage.getItem("role") === "ADMIN";
-
+  // final correct code
+  const isAdmin = localStorage.getItem("role") === "ADMIN";
+  // Pulling staff_code since username was undefined in your logs
+  const storedUserIdentifier = localStorage.getItem("staff_code") || "Staff";
 
   const [vouchers, setVouchers] = useState([]);
   const [loadingVouchers, setLoadingVouchers] = useState(false);
   const [loadingCreate, setLoadingCreate] = useState(false);
   const [loadingPDF, setLoadingPDF] = useState(false);
+  const [loadingDelete, setLoadingDelete] = useState(null); // Stores ID of voucher being deleted
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
   const [sortOption, setSortOption] = useState("");
@@ -51,7 +52,7 @@ const isAdmin = localStorage.getItem("role") === "ADMIN";
     paid_by: "Cash",
     bank_details: "",
     online_payment_mode: "",
-    authorized_by: "",
+    authorized_by: storedUserIdentifier,
     receiver_signature_name: "",
     receiver_signature: "",
   });
@@ -84,144 +85,155 @@ const isAdmin = localStorage.getItem("role") === "ADMIN";
     receiver_signature: data.receiver_signature || "",
   });
 
-// 🔥 ENHANCED HEADER WITH FULL COMPANY DETAILS
-const downloadVoucherPDF = (voucher) => {
-  setLoadingPDF(true);
-  try {
-    const doc = new jsPDF('p', 'mm', 'a4');
+  // 🔥 DELETE VOUCHER FUNCTION
+  const handleDelete = async (id) => {
+    // if (!window.confirm("Are you sure you want to delete this voucher? This action cannot be undone.")) return;
     
-    // Helper function to generate logo (you'll need to implement this)
-    const generateWithLogo = async () => {
-      try {
-        const response = await fetch('/logo.png');
-        const blob = await response.blob();
-        const reader = new FileReader();
-        return new Promise((resolve) => {
-          reader.onload = () => resolve(reader.result);
-          reader.readAsDataURL(blob);
-        });
-      } catch {
-        return null;
-      }
-    };
+    setLoadingDelete(id);
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/staff-management/delete-payment-voucher/${id}/`,
+        {
+          method: "DELETE",
+          headers: getAuthHeaders(),
+        }
+      );
 
-    generateWithLogo().then((logoData) => {
-      if (logoData) {
-        // ✅ WITH LOGO - LEFT ALIGNED
-        doc.addImage(logoData, "PNG", 20, 10, 30, 25);
-        doc.setFontSize(20); 
-        doc.setFont("helvetica", "bold"); 
-        doc.text('SHORELUX HOTELS', 60, 22);
-        doc.setFontSize(10); 
-        doc.setFont("helvetica", "normal"); 
-        doc.text('Beach Resort - Kovalam, Trivandrum', 60, 30);
-        doc.text('info@shoreluxbeachresort.com  ||  +91 9656500755', 60, 37);
-        
-        // Header underline
-        doc.setDrawColor(200);
-        doc.setLineWidth(0.5);
-        doc.line(15, 45, 195, 45);
-        
-        let yPos = 55;
-        
-        // Rest of content...
-        renderVoucherContent(doc, voucher, yPos);
-        
+      if (res.ok) {
+        showToast("Voucher deleted successfully", "success");
+        fetchVouchers(); // Refresh list
+        fetchNextVoucherNo(); // Refresh next number in case it changed
       } else {
-        // ✅ NO LOGO - CENTERED
-        doc.setFontSize(24); 
-        doc.setFont("helvetica", "bold"); 
-        doc.text('SHORELUX HOTELS', 105, 20, { align: 'center' });
-        doc.setFontSize(12); 
-        doc.setFont("helvetica", "italic");
-        doc.text('Beach Resort - Kovalam, Trivandrum', 105, 30, { align: 'center' });
-        doc.text('info@shoreluxbeachresort.com  ||  +91 9656500755', 105, 37, { align: 'center' });
-        
-        // Header underline
-        doc.setDrawColor(200);
-        doc.setLineWidth(0.5);
-        doc.line(15, 45, 195, 45);
-        
-        let yPos = 55;
-        
-        // Rest of content...
-        renderVoucherContent(doc, voucher, yPos);
+        const data = await res.json();
+        showToast(data.error || "Failed to delete voucher", "error");
       }
-      
-      doc.save(`Voucher_${voucher.voucher_no}.pdf`);
-      showToast("✅ Voucher PDF generated successfully!", "success");
-      setLoadingPDF(false);
-    });
-    
-  } catch (err) {
-    showToast("❌ Failed to generate PDF", "error");
-    setLoadingPDF(false);
-  }
-};
-
-// 🔥 HELPER FUNCTION FOR VOUCHER CONTENT
-const renderVoucherContent = (doc, voucher, startY) => {
-  let yPos = startY;
-
-  // Helper function for clean fields
-  const addField = (label, value, y) => {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.text(label + ":", 15, y);
-    
-    doc.setFont("helvetica", "normal");
-    doc.text(value || "-", 60, y, { maxWidth: 130 });
+    } catch (err) {
+      showToast("Error deleting voucher", "error");
+    } finally {
+      setLoadingDelete(null);
+    }
   };
 
-  // Format amount
-  const amountNum = Number(voucher.amount || 0);
-  const formattedAmount = amountNum.toLocaleString("en-IN", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  // 🔥 ENHANCED HEADER WITH FULL COMPANY DETAILS
+  const downloadVoucherPDF = (voucher) => {
+    setLoadingPDF(true);
+    try {
+      const doc = new jsPDF('p', 'mm', 'a4');
+      
+      const generateWithLogo = async () => {
+        try {
+          const response = await fetch('/logo.png');
+          const blob = await response.blob();
+          const reader = new FileReader();
+          return new Promise((resolve) => {
+            reader.onload = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+          });
+        } catch {
+          return null;
+        }
+      };
 
-  // Payment method with details
-  let paymentMethod = voucher.paid_by;
-  if (voucher.paid_by === "Cheque" && voucher.bank_details) {
-    paymentMethod += ` (${voucher.bank_details})`;
-  } else if (voucher.paid_by === "Online" && voucher.online_payment_mode) {
-    paymentMethod += ` (${voucher.online_payment_mode})`;
-  }
+      generateWithLogo().then((logoData) => {
+        if (logoData) {
+          doc.addImage(logoData, "PNG", 20, 10, 30, 25);
+          doc.setFontSize(20); 
+          doc.setFont("helvetica", "bold"); 
+          doc.text('SHORELUX HOTELS', 60, 22);
+          doc.setFontSize(10); 
+          doc.setFont("helvetica", "normal"); 
+          doc.text('Beach Resort - Kovalam, Trivandrum', 60, 30);
+          doc.text('info@shoreluxbeachresort.com  ||  +91 9656500755', 60, 37);
+          
+          doc.setDrawColor(200);
+          doc.setLineWidth(0.5);
+          doc.line(15, 45, 195, 45);
+          
+          let yPos = 55;
+          renderVoucherContent(doc, voucher, yPos);
+          
+        } else {
+          doc.setFontSize(24); 
+          doc.setFont("helvetica", "bold"); 
+          doc.text('SHORELUX HOTELS', 105, 20, { align: 'center' });
+          doc.setFontSize(12); 
+          doc.setFont("helvetica", "italic");
+          doc.text('Beach Resort - Kovalam, Trivandrum', 105, 30, { align: 'center' });
+          doc.text('info@shoreluxbeachresort.com  ||  +91 9656500755', 105, 37, { align: 'center' });
+          
+          doc.setDrawColor(200);
+          doc.setLineWidth(0.5);
+          doc.line(15, 45, 195, 45);
+          
+          let yPos = 55;
+          renderVoucherContent(doc, voucher, yPos);
+        }
+        
+        doc.save(`Voucher_${voucher.voucher_no}.pdf`);
+        showToast("✅ Voucher PDF generated successfully!", "success");
+        setLoadingPDF(false);
+      });
+      
+    } catch (err) {
+      showToast("❌ Failed to generate PDF", "error");
+      setLoadingPDF(false);
+    }
+  };
 
-  // All fields
-  addField("Voucher No.", voucher.voucher_no, yPos); yPos += 10;
-  addField("Date", voucher.date, yPos); yPos += 10;
-  addField("Paid To", voucher.paid_to, yPos); yPos += 10;
-  addField("Amount", `${formattedAmount}`, yPos); yPos += 10;
-  addField("Description", voucher.being, yPos); yPos += 12;
-  addField("Payment Method", paymentMethod, yPos); 
-  yPos += 12;
+  const renderVoucherContent = (doc, voucher, startY) => {
+    let yPos = startY;
 
-  // Signatures section
-  yPos += 10;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.text("Authorized By:", 20, yPos);
-  doc.text("Receiver's Name:", 110, yPos);
-  
-  yPos += 8;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(11);
-  doc.text(voucher.authorized_by || "_______________________", 20, yPos);
-  doc.text(voucher.receiver_signature_name || "_______________________", 110, yPos);
-  
-  yPos += 6;
-  doc.setFontSize(10);
-  doc.text("Signature", 25, yPos);
-  doc.text("Signature", 120, yPos);
+    const addField = (label, value, y) => {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text(label + ":", 15, y);
+      
+      doc.setFont("helvetica", "normal");
+      doc.text(value || "-", 60, y, { maxWidth: 130 });
+    };
 
-  // Footer text only
-  doc.setFont("helvetica", "italic");
-  doc.setFontSize(9);
-  doc.text("© Shorelux Kovalam | Confidential Document", 105, 202, { align: "center" });
-};
+    const amountNum = Number(voucher.amount || 0);
+    const formattedAmount = amountNum.toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
 
+    let paymentMethod = voucher.paid_by;
+    if (voucher.paid_by === "Cheque" && voucher.bank_details) {
+      paymentMethod += ` (${voucher.bank_details})`;
+    } else if (voucher.paid_by === "Online" && voucher.online_payment_mode) {
+      paymentMethod += ` (${voucher.online_payment_mode})`;
+    }
 
+    addField("Voucher No.", voucher.voucher_no, yPos); yPos += 10;
+    addField("Date", voucher.date, yPos); yPos += 10;
+    addField("Paid To", voucher.paid_to, yPos); yPos += 10;
+    addField("Amount", `${formattedAmount}`, yPos); yPos += 10;
+    addField("Description", voucher.being, yPos); yPos += 12;
+    addField("Payment Method", paymentMethod, yPos); 
+    yPos += 12;
+
+    yPos += 10;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("Authorized By:", 20, yPos);
+    doc.text("Receiver's Name:", 110, yPos);
+    
+    yPos += 8;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.text(voucher.authorized_by || "_______________________", 20, yPos);
+    doc.text(voucher.receiver_signature_name || "_______________________", 110, yPos);
+    
+    yPos += 6;
+    doc.setFontSize(10);
+    doc.text("Signature", 25, yPos);
+    doc.text("Signature", 120, yPos);
+
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9);
+    doc.text("© Shorelux Kovalam | Confidential Document", 105, 202, { align: "center" });
+  };
 
   const fetchNextVoucherNo = async () => {
     try {
@@ -263,14 +275,11 @@ const renderVoucherContent = (doc, voucher, startY) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
     let newForm = { ...form, [name]: value };
-    
     if (name === "paid_by") {
       newForm.bank_details = "";
       newForm.online_payment_mode = "";
     }
-    
     setForm(newForm);
   };
 
@@ -302,7 +311,7 @@ const renderVoucherContent = (doc, voucher, startY) => {
           paid_by: "Cash",
           bank_details: "",
           online_payment_mode: "",
-          authorized_by: "",
+          authorized_by: storedUserIdentifier, 
           receiver_signature_name: "",
           receiver_signature: "",
           date: new Date().toISOString().slice(0, 10),
@@ -476,11 +485,12 @@ const renderVoucherContent = (doc, voucher, startY) => {
               Authorized By
             </label>
             <input
-              className="w-full border-b-2 border-dotted border-black p-2 text-sm bg-transparent"
+              className="w-full border-b-2 border-dotted border-black p-2 text-sm bg-gray-100"
               name="authorized_by"
               value={form.authorized_by}
               onChange={handleChange}
               placeholder="Authorizing person name"
+              readOnly={!isAdmin} 
             />
           </div>
           <div className="flex-1">
@@ -560,7 +570,7 @@ const renderVoucherContent = (doc, voucher, startY) => {
                   <th className="border p-2">Amount (₹)</th>
                   <th className="border p-2">Receiver</th>
                   <th className="border p-2">Payment Method</th>
-                  <th className="border p-2">Action</th>
+                  <th className="border p-2">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -603,13 +613,22 @@ const renderVoucherContent = (doc, voucher, startY) => {
                           {paymentDisplay}
                         </td>
                         <td className="border p-2 whitespace-nowrap">
-                          <button
-                            onClick={() => downloadVoucherPDF(v)}
-                            disabled={loadingPDF}
-                            className="px-3 py-1 bg-blue-600 cursor-pointer text-white text-xs rounded hover:bg-blue-700 disabled:opacity-50 transition"
-                          >
-                            {loadingPDF ? "PDF..." : "Print PDF"}
-                          </button>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => downloadVoucherPDF(v)}
+                              disabled={loadingPDF}
+                              className="px-3 py-1 bg-blue-600 cursor-pointer text-white text-xs rounded hover:bg-blue-700 disabled:opacity-50 transition"
+                            >
+                              {loadingPDF ? "PDF..." : "Print"}
+                            </button>
+                            <button
+                              onClick={() => handleDelete(v.id)}
+                              disabled={loadingDelete === v.id}
+                              className="px-3 py-1 bg-red-600 cursor-pointer text-white text-xs rounded hover:bg-red-700 disabled:opacity-50 transition flex items-center justify-center"
+                            >
+                              {loadingDelete === v.id ? "..." : <Trash2 size={14} />}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );

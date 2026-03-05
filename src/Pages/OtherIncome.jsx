@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { Search, Edit2, X, AlertCircle, CheckCircle } from "lucide-react";
+import { Search, Edit2, X, AlertCircle, CheckCircle, Trash2 } from "lucide-react";
+
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
 
@@ -129,6 +130,39 @@ const isAdmin = localStorage.getItem("role") === "ADMIN";
       setLoading(false);
     }
   }, [showToast]);
+
+
+
+  // 🔥 DELETE OTHER INCOME FUNCTION - NEW
+const handleDeleteIncome = async (record) => {
+  if (!isAdmin) {
+    showToast("Delete permission denied. Admin only.", "error");
+    return;
+  }
+
+  if (!isEditable(record.date)) {
+    showToast("Can only delete income records up to 2 days old", "error");
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/staff-management/delete-other-income/${record.id}`,  // 🔥 Your new API
+      {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      }
+    );
+
+    const result = await handleApiResponse(response);
+    showToast(result.message || "Income record deleted successfully!", "success");
+    await fetchIncomeRecords();
+  } catch (err) {
+    console.error("Delete income error:", err);
+    showToast(err.message || "Failed to delete income record", "error");
+  }
+};
+
 
   // --- Create income ---
   const handleSubmit = async (e) => {
@@ -543,20 +577,46 @@ const isAdmin = localStorage.getItem("role") === "ADMIN";
                       {record.description}
                     </td>
 
-                    <td className="border p-3">
-                      <button
-                        // *** FIX: Pass the unique record.id instead of index ***
-                        onClick={() => handleEditClick(record.id)}
-                        disabled={!isEditable(record.date) || otpLoading || loading}
-                        className={`px-3 py-1 rounded text-xs cursor-pointer font-medium transition-all ${
-                          isEditable(record.date)
-                            ? "bg-blue-600 text-white hover:bg-blue-700 shadow-md"
-                            : "bg-gray-400 text-gray-700 cursor-not-allowed"
-                        } ${otpLoading ? "opacity-70" : ""}`}
-                      >
-                        {isEditable(record.date) ? "Edit" : "Too Old"}
-                      </button>
-                    </td>
+<td className="border p-3">
+  <div className="flex gap-1">
+    {/* 🔥 EXISTING EDIT BUTTON */}
+    <button
+      onClick={() => handleEditClick(record.id)}
+      disabled={!isEditable(record.date) || otpLoading || loading}
+      className={`px-3 py-1 rounded text-xs cursor-pointer font-medium transition-all ${
+        isEditable(record.date)
+          ? "bg-blue-600 text-white hover:bg-blue-700 shadow-md"
+          : "bg-gray-400 text-gray-700 cursor-not-allowed"
+      } ${otpLoading ? "opacity-70" : ""}`}
+    >
+      {isEditable(record.date) ? "Edit" : "Too Old"}
+    </button>
+    
+    {/* 🔥 NEW DELETE BUTTON - ADMIN ONLY */}
+    {isAdmin && (
+      <button
+        type="button"
+        onClick={() => handleDeleteIncome(record)}
+        disabled={!isEditable(record.date) || loading}
+        className={`p-2 rounded transition-all flex items-center cursor-pointer justify-center ${
+          isEditable(record.date)
+            ? "bg-red-600 text-white hover:bg-red-700 shadow-md active:scale-95"
+            : "bg-gray-400 text-gray-700 cursor-not-allowed"
+        }`}
+        title={
+          !isAdmin 
+            ? "Admin only" 
+            : !isEditable(record.date) 
+            ? "Only 2 days old records deletable" 
+            : "Delete income record"
+        }
+      >
+        <Trash2 size={14} />
+      </button>
+    )}
+  </div>
+</td>
+
 
                   </tr>
                 ))

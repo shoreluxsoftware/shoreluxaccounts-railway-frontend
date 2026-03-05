@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 // Import Lucide icons for a professional look
-import { Search, X, AlertCircle, CheckCircle, Calendar } from "lucide-react"; 
+import { Search, X, AlertCircle, CheckCircle, Calendar, Trash2 } from "lucide-react";
+
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
 
@@ -108,6 +109,39 @@ const isAdmin = localStorage.getItem("role") === "ADMIN";
       setLoading(false);
     }
   }, [showToast]);
+
+
+
+  // 🔥 DELETE SALES INCOME FUNCTION - NEW
+const handleDeleteSale = async (sale) => {
+  if (!isAdmin) {
+    showToast("Delete permission denied. Admin only.", "error");
+    return;
+  }
+
+  if (!isEditable(sale.date)) {
+    showToast("Can only delete sales up to 2 days old", "error");
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/staff-management/delete-sales-income/${sale.id}`,  // 🔥 Your new API
+      {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      }
+    );
+
+    const result = await handleApiResponse(response);
+    showToast(result.message || "Sales record deleted successfully!", "success");
+    await fetchSales();
+  } catch (err) {
+    console.error("Delete sale error:", err);
+    showToast(err.message || "Failed to delete sales record", "error");
+  }
+};
+
 
   useEffect(() => {
     fetchSales();
@@ -432,19 +466,46 @@ const isAdmin = localStorage.getItem("role") === "ADMIN";
                     </td>
                     <td className="border p-3 font-bold text-green-700">₹ {Number(sale.amount).toLocaleString("en-IN")}</td>
                     <td className="border p-3 max-w-xs truncate" title={sale.description}>{sale.description}</td>
-                    <td className="border p-3 text-center">
-                      <button
-                        onClick={() => handleEditClick(idx)}
-                        disabled={(!isAdmin && !isEditable(sale.date)) || loading || otpLoading}
-                        className={`px-4 py-1.5 rounded text-xs font-bold transition-all ${
-                          isAdmin || isEditable(sale.date)
-                            ? "bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"
-                            : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                        }`}
-                      >
-                        {isAdmin || isEditable(sale.date) ? "Edit" : "Locked"}
-                      </button>
-                    </td>
+<td className="border p-3 text-center">
+  <div className="flex gap-1 justify-center">
+    {/* 🔥 EXISTING EDIT BUTTON */}
+    <button
+      onClick={() => handleEditClick(idx)}
+      disabled={(!isAdmin && !isEditable(sale.date)) || loading || otpLoading}
+      className={`px-3 py-1 rounded text-xs font-bold transition-all ${
+        isAdmin || isEditable(sale.date)
+          ? "bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"
+          : "bg-gray-200 text-gray-400 cursor-not-allowed"
+      }`}
+    >
+      {isAdmin || isEditable(sale.date) ? "Edit" : "Locked"}
+    </button>
+    
+    {/* 🔥 NEW DELETE BUTTON - ADMIN ONLY */}
+    {isAdmin && (
+      <button
+        type="button"
+        onClick={() => handleDeleteSale(sale)}
+        disabled={!isEditable(sale.date) || loading}
+        className={`p-2 rounded transition-all flex cursor-pointer  items-center justify-center ${
+          isEditable(sale.date)
+            ? "bg-red-600 text-white hover:bg-red-700 shadow-md active:scale-95"
+            : "bg-gray-400 text-gray-700 cursor-not-allowed"
+        }`}
+        title={
+          !isAdmin 
+            ? "Admin only" 
+            : !isEditable(sale.date) 
+            ? "Only 2 days old sales deletable" 
+            : "Delete sales record"
+        }
+      >
+        <Trash2 size={14} />
+      </button>
+    )}
+  </div>
+</td>
+
                   </tr>
                 ))
               )}

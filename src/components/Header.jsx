@@ -3,6 +3,7 @@ import logo from "../assets/logo.png"; // Update path if needed
 import { Menu, X, ChevronDown, LogOut } from "lucide-react"; 
 import { useNavigate, useLocation } from "react-router-dom";
 
+
 const Header = (props) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -12,8 +13,10 @@ const Header = (props) => {
   // *** NEW: useRef to hold the timeout ID for the delay ***
   const dropdownTimeoutRef = useRef(null); 
 
+
   // 1. Initialize role state from localStorage on first render
   const [role, setRole] = useState(props.role || localStorage.getItem("role") || "GUEST");
+
 
   // 2. Use useEffect to listen for role changes (optional, but good for dynamic updates)
   useEffect(() => {
@@ -21,8 +24,10 @@ const Header = (props) => {
         setRole(localStorage.getItem("role") || "GUEST");
     };
 
+
     window.addEventListener('roleChange', updateRole);
     updateRole();
+
 
     return () => {
         window.removeEventListener('roleChange', updateRole);
@@ -32,6 +37,7 @@ const Header = (props) => {
     };
   }, []);
 
+
   // --- Timeout Handlers for Desktop Menu ---
   const handleMouseEnter = (menuTitle) => {
       if (dropdownTimeoutRef.current) {
@@ -40,12 +46,20 @@ const Header = (props) => {
       setActiveDropdown(menuTitle);
   };
 
-  const handleMouseLeave = () => {
+
+  const handleMouseEnterLeave = () => {
       dropdownTimeoutRef.current = setTimeout(() => {
           setActiveDropdown(null);
       }, 100);
   };
+
+  const handleMouseLeave = () => {
+    dropdownTimeoutRef.current = setTimeout(() => {
+        setActiveDropdown(null);
+    }, 100);
+};
   // ------------------------------------------
+
 
   // --- Logout Handler ---
   const handleLogout = () => {
@@ -58,7 +72,8 @@ const Header = (props) => {
   };
   // ------------------------
 
-  // 🔥 NEW MENU STRUCTURE
+
+  // 🔥 UPDATED MENU STRUCTURE
   const menus = [
     { title: "Dashboard", path: "/home" },
     {
@@ -69,7 +84,15 @@ const Header = (props) => {
       ],
     },
     { title: "Create Voucher", path: "/vouchercreate" },
-    { title: "Expenses", path: "/expenses" },
+    
+    // 🔥 EXPENSES DROPDOWN (Salary Expense moved here)
+    {
+      title: "Expenses",
+      children: [
+        { name: "General Expenses", path: "/expenses" },
+        { name: "Salary Expense", path: "/salaryexpense" },
+      ],
+    },
     
     // 🔥 CAFETERIA DROPDOWN
     {
@@ -79,9 +102,6 @@ const Header = (props) => {
         { name: "Cafeteria Expense", path: "/cafeteriaexpense" },
       ],
     },
-    
-    // 🔥 SALARY EXPENSE
-    { title: "Salary Expense", path: "/salaryexpense" },
     
     {
       title: "Income",
@@ -120,6 +140,7 @@ const Header = (props) => {
   ];
   // -----------------------------------------------------------
 
+
   const isActive = (menu) => {
     if (menu.path && location.pathname === menu.path) return true;
     if (menu.children) {
@@ -130,6 +151,7 @@ const Header = (props) => {
   
   const isChildActive = (path) => location.pathname === path;
 
+
   return (
     <header className="w-full bg-white shadow-md border-b border-gray-200 px-6 py-3 flex justify-between items-center sticky top-0 z-50">
       {/* <img
@@ -138,6 +160,7 @@ const Header = (props) => {
         className="h-12 w-auto cursor-pointer"
         onClick={() => navigate("/home")}
       /> */}
+
 
       {/* Desktop Menu */}
       <nav className="hidden md:flex gap-6">
@@ -184,6 +207,7 @@ const Header = (props) => {
         ))}
       </nav>
 
+
       {/* Right-aligned actions (Logout + Mobile Menu Toggle) */}
       <div className="flex items-center gap-3">
           <button
@@ -194,6 +218,7 @@ const Header = (props) => {
             <LogOut size={24} />
           </button>
 
+
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
             className="md:hidden text-black p-2"
@@ -202,6 +227,7 @@ const Header = (props) => {
             {mobileOpen ? <X size={26} /> : <Menu size={26} />}
           </button>
       </div>
+
 
       {/* Mobile Sidebar Menu */}
       <div
@@ -257,5 +283,6 @@ const Header = (props) => {
     </header>
   );
 };
+
 
 export default Header;

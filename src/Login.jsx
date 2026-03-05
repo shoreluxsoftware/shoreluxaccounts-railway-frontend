@@ -49,17 +49,29 @@ const Login = () => {
         return;
       }
 
-      // Save data
+      // 1. Determine staff code to store (Use form value for staff, or "ADMIN" for admin)
+      const staffCodeToStore = role === "staff" ? form.staffCode : "ADMIN";
+
+      // 2. Save data to localStorage
       localStorage.setItem("access_token", data.token.access);
       localStorage.setItem("refresh_token", data.token.refresh);
       localStorage.setItem("role", data.role);
       localStorage.setItem("username", data.username);
+      localStorage.setItem("staff_code", staffCodeToStore);
+
+      // 3. 🔥 Console Log the saved data for debugging
+      console.log("--- Login Successful ---");
+      console.log("Access Token:", data.token.access);
+      console.log("Role Stored:", localStorage.getItem("role"));
+      console.log("Username Stored:", localStorage.getItem("username"));
+      console.log("Staff Code Stored:", localStorage.getItem("staff_code"));
+      console.log("------------------------");
 
       // ---- Toast Message ----
       if (data.role === "ADMIN") {
-        toast.success(` Welcome Admin`);
+        toast.success(`Welcome Admin`);
       } else {
-        toast.success(` Welcome ${form.staffCode}`);
+        toast.success(`Welcome ${staffCodeToStore}`);
       }
 
       // Redirect after success

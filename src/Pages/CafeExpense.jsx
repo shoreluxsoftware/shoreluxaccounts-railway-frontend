@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Search, X, AlertCircle, CheckCircle, Plus } from "lucide-react";
+import { Search, X, AlertCircle, CheckCircle, Plus, Trash2 } from "lucide-react";
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
 
@@ -125,6 +125,38 @@ const isAdmin = localStorage.getItem("role") === "ADMIN";
       setLoadingTable(false);
     }
   }, [showToast]);
+
+
+  // 🔥 DELETE CAFETERIA EXPENSE FUNCTION - NEW
+const handleDeleteExpense = async (expense) => {
+  if (!isAdmin) {
+    showToast("Delete permission denied. Admin only.", "error");
+    return;
+  }
+
+  if (!isEditable(expense.date)) {
+    showToast("Can only delete cafe expenses up to 2 days old", "error");
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/staff-management/delete-cafeteria-expense/${expense.id}`,  // 🔥 Your new API
+      {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      }
+    );
+
+    const result = await handleJsonOrError(response);
+    showToast(result.message || "Cafe expense deleted successfully!", "success");
+    await fetchExpenses();
+  } catch (err) {
+    console.error("Delete cafe expense error:", err);
+    showToast(err.message || "Failed to delete cafe expense", "error");
+  }
+};
+
 
   // 🔥 CREATE CAFETERIA EXPENSE - NEW API
   const handleSubmit = async (e) => {
@@ -715,21 +747,48 @@ const isAdmin = localStorage.getItem("role") === "ADMIN";
                         )}
                       </div>
                     </td>
-                    <td className="border p-3">
-                      <button
-                        type="button"
-                        onClick={() => handleEditClick(exp)}
-                        disabled={!isEditable(exp.date) || loading || otpLoading}
-                        className={`px-3 py-1 rounded text-xs cursor-pointer font-medium transition-all flex items-center gap-1 ${
-                          isEditable(exp.date)
-                            ? "bg-blue-600 text-white hover:bg-blue-700 shadow-md"
-                            : "bg-gray-400 text-gray-700 cursor-not-allowed"
-                        } ${otpLoading ? "opacity-70" : ""}`}
-                        title={!isEditable(exp.date) ? "Only 2 days old expenses editable" : ""}
-                      >
-                        {isEditable(exp.date) ? "Edit" : "Too Old"}
-                      </button>
-                    </td>
+<td className="border p-3">
+  <div className="flex gap-1">
+    {/* 🔥 EXISTING EDIT BUTTON */}
+    <button
+      type="button"
+      onClick={() => handleEditClick(exp)}
+      disabled={!isEditable(exp.date) || loading || otpLoading}
+      className={`px-3 py-1 rounded text-xs cursor-pointer font-medium transition-all flex items-center gap-1 ${
+        isEditable(exp.date)
+          ? "bg-blue-600 text-white hover:bg-blue-700 shadow-md"
+          : "bg-gray-400 text-gray-700 cursor-not-allowed"
+      } ${otpLoading ? "opacity-70" : ""}`}
+      title={!isEditable(exp.date) ? "Only 2 days old expenses editable" : ""}
+    >
+      {isEditable(exp.date) ? "Edit" : "Too Old"}
+    </button>
+    
+    {/* 🔥 NEW DELETE BUTTON - ADMIN ONLY */}
+    {isAdmin && (
+      <button
+        type="button"
+        onClick={() => handleDeleteExpense(exp)}
+        disabled={!isEditable(exp.date) || loadingTable}
+        className={`p-2 rounded transition-all flex items-center justify-center cursor-pointer ${
+          isEditable(exp.date)
+            ? "bg-red-600 text-white hover:bg-red-700 shadow-md active:scale-95"
+            : "bg-gray-400 text-gray-700 cursor-not-allowed"
+        }`}
+        title={
+          !isAdmin 
+            ? "Admin only" 
+            : !isEditable(exp.date) 
+            ? "Only 2 days old expenses deletable" 
+            : "Delete cafe expense"
+        }
+      >
+        <Trash2 size={14} />
+      </button>
+    )}
+  </div>
+</td>
+
                   </tr>
                 ))
               )}
