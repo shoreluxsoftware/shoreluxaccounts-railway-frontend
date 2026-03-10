@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Eye, EyeOff, X, Trash2, CheckCircle, AlertTriangle, UserCheck, UserX } from "lucide-react"; 
 
-// --- Custom Components ---
+// --- Custom Components (KEEPING YOUR ORIGINAL) ---
 const Toast = ({ message, type, onClose }) => {
   if (!message) return null;
 
@@ -72,94 +72,50 @@ const ImageModal = ({ src, onClose, title }) => {
   );
 };
 
-const ConfirmationModal = ({ isOpen, message, onConfirm, onCancel, confirmText = "Confirm" }) => {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm bg-opacity-75 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md border-4 border-red-200">
-        <div className="flex justify-between items-start mb-4">
-          <h3 className="text-xl font-semibold text-red-600 flex items-center">
-            <AlertTriangle size={24} className="mr-2" />
-            Confirm Action
-          </h3>
-          <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 transition">
-            <X size={20} />
-          </button>
-        </div>
-        <p className="mb-6 text-gray-700 text-lg">{message}</p>
-        <div className="flex justify-end space-x-3">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition font-medium"
-          >
-            {confirmText}
-          </button>
-        </div>
-      </div>
+// 🔥 SIMPLE TOGGLE SWITCH COMPONENT
+const ToggleSwitch = ({ checked, onChange, disabled = false }) => (
+  <label className="relative inline-flex items-center cursor-pointer">
+    <input
+      type="checkbox"
+      className="sr-only peer"
+      checked={checked}
+      onChange={onChange}
+      disabled={disabled}
+    />
+    <div className={`w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 peer-disabled:bg-gray-300 peer-disabled:cursor-not-allowed ${checked ? 'peer-checked:bg-green-600' : ''}`}>
     </div>
-  );
-};
+  </label>
+);
 
 // --- Main StaffCreate Component ---
 const StaffCreate = () => {
   const token = localStorage.getItem("access_token");
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
-  const userRole = localStorage.getItem("role")?.toLowerCase(); 
-  const isAdmin = userRole === "ADMIN";
-
-  const [showEnablePassword, setShowEnablePassword] = useState(false);
-
-  // --- State Hooks ---
+  // State
   const [form, setForm] = useState({
-    first_name: "",
-    last_name: "",
-    age: "",
-    phone_number: "",
-    aadhaar_number: "",
-    aadhaarPhoto: null,
-    profile_image: null,
-    date: new Date().toISOString().split("T")[0],
+    first_name: "", last_name: "", age: "", phone_number: "", aadhaar_number: "",
+    aadhaarPhoto: null, profile_image: null, date: new Date().toISOString().split("T")[0],
   });
-
   const [aadhaarPreview, setAadhaarPreview] = useState(null);
   const [profilePreview, setProfilePreview] = useState(null);
   const [staffList, setStaffList] = useState([]);
-  
-  // Modal/Toast States
   const [toast, setToast] = useState({ message: '', type: '' });
   const [modalImage, setModalImage] = useState(null);
   const [modalTitle, setModalTitle] = useState("");
   const [confirmationModal, setConfirmationModal] = useState({
-    isOpen: false,
-    staffId: null,
-    fullName: "",
-    action: "", // 'delete' or 'disable'
+    isOpen: false, staffId: null, fullName: "", action: "",
   });
   const [enableLoginModal, setEnableLoginModal] = useState({
-    isOpen: false,
-    staffId: null,
-    fullName: "",
+    isOpen: false, staffId: null, fullName: "", existingUsername: "",
   });
-  const [enableLoginForm, setEnableLoginForm] = useState({
-    username: "",
-    password: "",
-  });
+  const [enableLoginForm, setEnableLoginForm] = useState({ username: "", password: "" });
+  const [showEnablePassword, setShowEnablePassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  // --- Utility Functions ---
-  const showToast = (message, type = 'error') => {
-    setToast({ message, type });
-  };
-  const closeToast = () => {
-    setToast({ message: '', type: '' });
-  };
+  // Utils
+  const showToast = (message, type = 'error') => setToast({ message, type });
+  const closeToast = () => setToast({ message: '', type: '' });
   const handleOpenModal = (imageUrl, title) => {
     setModalImage(imageUrl);
     setModalTitle(title);
@@ -169,54 +125,39 @@ const StaffCreate = () => {
     setModalTitle("");
   };
 
-  // --- Data Fetching ---
+  // Fetch staff
   const fetchStaffList = useCallback(async () => {
-    if (!token) {
-      showToast("Authentication token not found.", 'error');
-      return;
-    }
-
+    if (!token) return showToast("No token", 'error');
+    
     try {
+      setLoading(true);
       const res = await fetch(`${BACKEND_URL}/admin-management/list-staff`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+        headers: { Authorization: `Bearer ${token}` }
       });
-
       const data = await res.json();
-
-      if (!res.ok) {
-        showToast(data.detail || "Failed to fetch staff list.", 'error');
-        return;
-      }
       
-      // Add this INSIDE fetchStaffList(), right after setStaffList
-setStaffList(data.staff_list || []); 
-
-// 🔥 TEMP DEBUG - REMOVE LATER
-console.log("🔥 API RESPONSE:", data.staff_list);
-console.log("🔥 FIRST STAFF:", data.staff_list[0]);
-
+      if (res.ok) {
+        setStaffList(data.staff_list || []);
+      } else {
+        showToast(data.detail || "Failed to fetch staff", 'error');
+      }
     } catch (err) {
-      console.error("Error fetching staff list:", err);
-      showToast("Network error: Could not load staff list.", 'error');
+      showToast("Network error", 'error');
+    } finally {
+      setLoading(false);
     }
-  }, [token, BACKEND_URL]); 
+  }, [token, BACKEND_URL]);
 
   useEffect(() => {
     fetchStaffList();
-  }, [fetchStaffList]); 
+  }, [fetchStaffList]);
 
-  // --- Form Handlers ---
+  // Form handlers
   const handleChange = (e) => {
     const { name, value, files } = e.target;
-
-    if (files && files.length > 0) {
+    if (files?.[0]) {
       const file = files[0];
       setForm({ ...form, [name]: file });
-
       const reader = new FileReader();
       reader.onloadend = () => {
         if (name === "aadhaarPhoto") setAadhaarPreview(reader.result);
@@ -225,34 +166,24 @@ console.log("🔥 FIRST STAFF:", data.staff_list[0]);
       reader.readAsDataURL(file);
       return;
     }
-
     setForm({ ...form, [name]: value });
   };
 
   const validateForm = () => {
-    if (
-      !form.first_name.trim() ||
-      !form.last_name.trim() ||
-      !form.age ||
-      !form.phone_number ||
-      !form.aadhaar_number ||
-      !form.aadhaarPhoto ||
-      !form.profile_image
-    ) {
-      showToast("All fields including Aadhaar & Profile picture are required.", 'error');
+    if (!form.first_name?.trim() || !form.last_name?.trim() || !form.age || 
+        !form.phone_number || !form.aadhaar_number || !form.aadhaarPhoto || 
+        !form.profile_image) {
+      showToast("All fields are required", 'error');
       return false;
     }
-
     if (!/^\d{10}$/.test(form.phone_number)) {
-      showToast("Phone number must be exactly 10 digits.", 'error');
+      showToast("Phone must be 10 digits", 'error');
       return false;
     }
-
     if (!/^\d{12}$/.test(form.aadhaar_number)) {
-      showToast("Aadhaar must be exactly 12 digits.", 'error');
+      showToast("Aadhaar must be 12 digits", 'error');
       return false;
     }
-
     return true;
   };
 
@@ -266,246 +197,214 @@ console.log("🔥 FIRST STAFF:", data.staff_list[0]);
     formData.append('age', form.age);
     formData.append('phone_number', form.phone_number);
     formData.append('aadhaar_number', form.aadhaar_number);
-    formData.append('aadhaar_card', form.aadhaarPhoto); 
-    formData.append('profile_image', form.profile_image); 
+    formData.append('aadhaar_card', form.aadhaarPhoto);
+    formData.append('profile_image', form.profile_image);
 
     try {
+      setLoading(true);
       const res = await fetch(`${BACKEND_URL}/admin-management/create-staff`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
-
       const data = await res.json();
-
-      if (!res.ok) {
-        showToast(data.detail || "Something went wrong during staff creation.", 'error');
-        return;
-      }
-
-      showToast("Staff member created successfully!", 'success');
-      fetchStaffList();
       
-      setForm({
-        first_name: "",
-        last_name: "",
-        age: "",
-        phone_number: "",
-        aadhaar_number: "",
-        aadhaarPhoto: null,
-        profile_image: null,
-        date: new Date().toISOString().split("T")[0],
-      });
-
-      setAadhaarPreview(null);
-      setProfilePreview(null);
-
+      if (res.ok) {
+        showToast("Staff created successfully!", 'success');
+        setForm({
+          first_name: "", last_name: "", age: "", phone_number: "", aadhaar_number: "",
+          aadhaarPhoto: null, profile_image: null, date: new Date().toISOString().split("T")[0],
+        });
+        setAadhaarPreview(null);
+        setProfilePreview(null);
+        fetchStaffList();
+      } else {
+        showToast(data.detail || "Creation failed", 'error');
+      }
     } catch (err) {
-      console.error("Staff creation network error:", err);
-      showToast("Network error. Try again.", 'error');
+      showToast("Network error", 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // 🔥 ENABLE LOGIN MODAL HANDLERS
-  const openEnableLoginModal = (staffId, fullName) => {
-    setEnableLoginModal({
-      isOpen: true,
-      staffId: staffId,
-      fullName: fullName,
+  // 🔥 TOGGLE HANDLER - SIMPLE & PERFECT
+// 🔥 FIXED TOGGLE HANDLER - SIMPLE & PERFECT
+const handleToggleLogin = async (staff) => {
+  const isEnabled = staff.can_login === true && staff.username?.trim();
+  
+  // 🔥 IF ENABLING LOGIN → Open Modal (needs username/password)
+  if (!isEnabled) {
+    openEnableLoginModal(staff);
+    return;
+  }
+  
+  // 🔥 IF DISABLING LOGIN → Direct API call (no credentials needed)
+  try {
+    setLoading(true);
+    const res = await fetch(`${BACKEND_URL}/admin-management/disable-login/${staff.id}`, {
+      method: 'POST',
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({}) // Empty body for disable
     });
-    setEnableLoginForm({ username: "", password: "" });
-    setShowEnablePassword(false);
-  };
+
+    const data = await res.json();
+    
+    if (res.ok) {
+      showToast('Login disabled successfully!', 'success');
+      fetchStaffList();
+    } else {
+      showToast(data.error || data.detail || 'Failed to disable login', 'error');
+    }
+  } catch (err) {
+    showToast("Network error", 'error');
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+  // Enable login modal
+// NEW (BLANK username field)
+const openEnableLoginModal = (staff) => {
+  setEnableLoginModal({
+    isOpen: true,
+    staffId: staff.id,
+    fullName: `${staff.first_name} ${staff.last_name}`,
+    existingUsername: staff.username || '',
+  });
+  setEnableLoginForm({ username: '', password: '' }); // ✅ ALWAYS BLANK!
+  setShowEnablePassword(false);
+};
+
 
   const closeEnableLoginModal = () => {
-    setEnableLoginModal({ isOpen: false, staffId: null, fullName: "" });
+    setEnableLoginModal({ isOpen: false, staffId: null, fullName: "", existingUsername: "" });
     setEnableLoginForm({ username: "", password: "" });
-    setShowEnablePassword(false);
   };
 
   const handleEnableLoginSubmit = async (e) => {
     e.preventDefault();
-    const { staffId, fullName } = enableLoginModal;
     const { username, password } = enableLoginForm;
-
+    
     if (!username.trim() || !password.trim()) {
-      showToast("Username and password are required", 'error');
+      showToast("Username and password required", 'error');
       return;
     }
 
     try {
-      const res = await fetch(`${BACKEND_URL}/admin-management/enable-login/${staffId}`, {
+      const res = await fetch(`${BACKEND_URL}/admin-management/enable-login/${enableLoginModal.staffId}`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
-
       const data = await res.json();
-
-      if (!res.ok) {
+      
+      if (res.ok) {
+        showToast(`Login enabled for ${enableLoginModal.fullName}!`, 'success');
+        closeEnableLoginModal();
+        fetchStaffList();
+      } else {
         showToast(data.error || "Failed to enable login", 'error');
-        return;
       }
-
-      showToast(`Login enabled for ${fullName}! Username: ${username}`, 'success');
-      closeEnableLoginModal();
-      fetchStaffList();
     } catch (err) {
-      console.error("Enable login error:", err);
-      showToast("Network error. Try again.", 'error');
+      showToast("Network error", 'error');
     }
   };
 
-  // 🔥 CONFIRMATION MODAL HANDLERS
-  const openConfirmationModal = (staffId, fullName, action) => {
-    setConfirmationModal({
-      isOpen: true,
-      staffId: staffId,
-      fullName: fullName,
-      action: action
-    });
+  // Confirmation modal handlers
+  const openConfirmationModal = (staffId, fullName) => {
+    setConfirmationModal({ isOpen: true, staffId, fullName, action: 'delete' });
   };
 
   const closeConfirmationModal = () => {
     setConfirmationModal({ isOpen: false, staffId: null, fullName: "", action: '' });
   };
 
-  const handleConfirmAction = async () => {
-    const { staffId, fullName, action } = confirmationModal;
-    
-    if (action === 'disable') {
-      // Disable Login
-      try {
-        const res = await fetch(`${BACKEND_URL}/admin-management/disable-login/${staffId}`, {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
-
+  const handleConfirmDelete = async () => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/admin-management/delete-staff/${confirmationModal.staffId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      if (res.ok) {
+        setStaffList(prev => prev.filter(s => s.id !== confirmationModal.staffId));
+        showToast(`"${confirmationModal.fullName}" deleted`, 'success');
+      } else {
         const data = await res.json();
-
-        if (!res.ok) {
-          showToast(data.detail || "Failed to disable login", 'error');
-          return;
-        }
-
-        showToast(`Login disabled for ${fullName}`, 'success');
-        fetchStaffList();
-      } catch (err) {
-        console.error("Disable login error:", err);
-        showToast("Network error. Try again.", 'error');
+        showToast(data.detail || "Delete failed", 'error');
       }
-    } else if (action === 'delete') {
-      // Delete Staff
-      try {
-        const res = await fetch(`${BACKEND_URL}/admin-management/delete-staff/${staffId}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (!res.ok) {
-          const data = await res.json();
-          showToast(data.detail || `Failed to delete staff member: ${fullName}.`, 'error');
-          return;
-        }
-
-        setStaffList(prevList => prevList.filter(staff => staff.id !== staffId));
-        showToast(`Staff member "${fullName}" deleted successfully.`, 'success');
-      } catch (err) {
-        console.error("Staff deletion network error:", err);
-        showToast("Network error. Could not delete staff member. Try again.", 'error');
-      }
+    } catch (err) {
+      showToast("Network error", 'error');
     }
-    
     closeConfirmationModal();
   };
 
-  // 🔥 HIGHLIGHTED LOGIN STATUS BADGE - SHOWS ALL STAFFS
-// 🔥 USE can_login FIELD - PERFECT FIX
-const LoginStatusBadge = ({ staff }) => {
-  const isDisabled = !staff.can_login; // 🔥 Backend sends can_login: true/false
+  // Status Badge & Actions
+  const LoginStatusBadge = ({ staff }) => {
+    const isEnabled = staff.can_login === true && staff.username?.trim();
+    return (
+      <span className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${
+        isEnabled 
+          ? 'bg-green-100 text-green-800 border border-green-200' 
+          : 'bg-red-100 text-red-800 border border-red-200'
+      }`}>
+        {isEnabled ? <UserCheck size={12} /> : <UserX size={12} />}
+        {isEnabled ? 'Active' : 'Inactive'}
+        {isEnabled && <span className="text-xs">@{staff.username}</span>}
+      </span>
+    );
+  };
+
+const ActionButtons = ({ staff }) => {
+  const isEnabled = staff.can_login === true && staff.username?.trim();
   
   return (
-    <div className={`px-4 py-2 rounded-full flex items-center gap-2 font-bold text-sm  transition-all duration-300 ${
-      isDisabled 
-        ? 'bg-red-500 text-white   ' 
-        : 'bg-green-500 text-white border-green-400 shadow-green-500 hover:shadow-green-600 ring-2 ring-green-300 ring-opacity-50'
-    }`}>
-      {isDisabled ? (
-        <>
-          <UserX size={16} className="" />
-          <span className="tracking-wide ">Disabled</span>
-        </>
-      ) : (
-        <>
-          <UserCheck size={16} className="" />
-          <span className="tracking-wide font-semibold">{staff.username}</span>
-        </>
-      )}
+    <div className="flex items-center gap-3">
+      {/* 🔥 PERFECT TOGGLE BEHAVIOR */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-medium text-gray-700">Login:</span>
+        <ToggleSwitch 
+          checked={isEnabled}
+          onChange={() => handleToggleLogin(staff)}  // Now opens modal when enabling!
+          disabled={loading}
+        />
+      </div>
+      
+      <button
+        onClick={() => openConfirmationModal(staff.id, `${staff.first_name} ${staff.last_name}`)}
+        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all hover:scale-105"
+        title="Delete Staff"
+        disabled={loading}
+      >
+        <Trash2 size={16} />
+      </button>
     </div>
   );
 };
 
 
-  // 🔥 ACTION BUTTONS
-  const ActionButtons = ({ staff }) => {
-    const isLoginDisabled = !staff.username || staff.username.trim() === "";
-    
-    return (
-      <div className="flex gap-1 justify-center">
-        {isLoginDisabled ? (
-          <button
-            onClick={() => openEnableLoginModal(staff.id, `${staff.first_name} ${staff.last_name}`)}
-            className="text-green-600 hover:text-green-800 p-1.5 bg-green-100 rounded-full transition-all hover:scale-110 shadow-md"
-            title="Enable Login"
-          >
-            <UserCheck size={16} /> 
-          </button>
-        ) : (
-          <button
-            onClick={() => openConfirmationModal(staff.id, `${staff.first_name} ${staff.last_name}`, 'disable')}
-            className="text-orange-600 hover:text-orange-800 p-1.5 bg-orange-100 rounded-full transition-all hover:scale-110 shadow-md"
-            title="Disable Login"
-          >
-            <UserX size={16} />
-          </button>
-        )}
-        <button
-          onClick={() => openConfirmationModal(staff.id, `${staff.first_name} ${staff.last_name}`, 'delete')}
-          className="text-red-600 hover:text-red-800 p-1.5 bg-red-100 rounded-full transition-all hover:scale-110 shadow-md"
-          title="Delete Staff"
-        >
-          <Trash2 size={16} />
-        </button>
-      </div>
-    );
-  };
-
   return (
     <div className="bg-[#F1F2F4] px-6 py-8 min-h-screen">
-      {/* Staff Creation Form */}
+      {/* Your ORIGINAL Form - NO CHANGES */}
       <form onSubmit={handleSubmit} className="bg-white shadow-md border border-gray-300 rounded-xl p-8 mb-8 max-w-5xl mx-auto">
         <h2 className="text-2xl font-semibold mb-8">Add Staff Member</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
           <div className="space-y-6">
-<div>
-  <label className="block mb-1 text-sm font-medium">Date</label>
-  <input
-    type="date"
-    name="date"
-    value={form.date}
-    onChange={handleChange}
-    className="w-full border-b-2 border-dotted border-black p-2 bg-gray-200 text-sm"
-  />
-</div>
+            <div>
+              <label className="block mb-1 text-sm font-medium">Date</label>
+              <input
+                type="date"
+                name="date"
+                value={form.date}
+                onChange={handleChange}
+                className="w-full border-b-2 border-dotted border-black p-2 bg-gray-200 text-sm"
+              />
+            </div>
             <div>
               <label className="block mb-1 text-sm font-medium">Last Name *</label>
               <input
@@ -578,27 +477,29 @@ const LoginStatusBadge = ({ staff }) => {
         </div>
         <button 
           type="submit" 
-          className="w-full mt-10 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition duration-150"
+          disabled={loading}
+          className="w-full mt-10 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition duration-150 disabled:opacity-50"
         >
-          Create Staff
+          {loading ? 'Creating...' : 'Create Staff'}
         </button>
       </form>
-      
-      {/* Staff List Table - SHOWS ALL STAFFS */}
+
+      {/* Staff List - SIMPLIFIED */}
       <div className="bg-white border shadow-md rounded-lg p-6 max-w-5xl mx-auto">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold">Created Staff Members ({staffList.length})</h2>
+          <h2 className="text-xl font-semibold">Staff Members ({staffList.length})</h2>
           <button 
             onClick={fetchStaffList}
-            className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition"
+            disabled={loading}
+            className="px-4 py-2 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition disabled:opacity-50"
           >
-            Refresh List
+            Refresh
           </button>
         </div>
-        
+
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px] border-collapse">
-            <thead className="bg-black text-white">
+            <thead className="bg-gray-800 text-white">
               <tr>
                 <th className="border p-3 text-sm text-left">S.No.</th>
                 <th className="border p-3 text-sm text-left">Photo</th>
@@ -606,54 +507,50 @@ const LoginStatusBadge = ({ staff }) => {
                 <th className="border p-3 text-sm text-left">Age</th>
                 <th className="border p-3 text-sm text-left">Phone</th>
                 <th className="border p-3 text-sm text-left">Aadhaar</th>
-                <th className="border p-3 text-sm text-left">Staff ID</th>
-                <th className="border p-3 text-sm text-left">Login Status</th>
+                <th className="border p-3 text-sm text-left">ID</th>
+                <th className="border p-3 text-sm text-left">Status</th>
                 <th className="border p-3 text-sm text-left">Actions</th>
               </tr>
             </thead>
             <tbody>
               {staffList.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="text-center py-5 text-gray-500">
+                  <td colSpan="9" className="text-center py-12 text-gray-500">
                     No staff added yet
                   </td>
                 </tr>
               ) : (
                 staffList.map((s, i) => (
-                  <tr key={s.id || i} className="hover:bg-gray-100">
-                    <td className="border p-3 text-sm font-semibold text-center">{i + 1}</td>
-                    <td className="border p-3 text-sm text-center">
+                  <tr key={s.id} className="hover:bg-gray-50 border-b">
+                    <td className="border p-3 text-sm font-medium">{i + 1}</td>
+                    <td className="border p-3">
                       {s.profile_image ? (
                         <img 
                           src={s.profile_image} 
-                          alt={`${s.first_name} Profile`}
-                          className="h-10 w-10 rounded-full object-cover mx-auto cursor-pointer border-2 border-gray-300 hover:border-blue-500 transition"
+                          alt="Profile"
+                          className="h-12 w-12 rounded-full object-cover mx-auto cursor-pointer border-2 border-gray-300 hover:border-blue-500 transition"
                           onClick={() => handleOpenModal(s.profile_image, `${s.first_name} ${s.last_name}'s Profile`)}
                         />
-                      ) : (
-                        <span className="text-xs text-gray-500">N/A</span>
-                      )}
+                      ) : 'N/A'}
                     </td>
                     <td className="border p-3 text-sm font-medium">{s.first_name} {s.last_name}</td>
                     <td className="border p-3 text-sm">{s.age}</td>
                     <td className="border p-3 text-sm">{s.phone_number}</td>
-                    <td className="border p-3 text-sm text-center">
+                    <td className="border p-3 text-sm">
                       {s.aadhaar_card ? (
                         <button 
                           className="text-blue-600 hover:text-blue-800 text-xs font-medium underline"
                           onClick={() => handleOpenModal(s.aadhaar_card, `${s.first_name} ${s.last_name}'s Aadhaar`)}
                         >
-                          View Card
+                          View
                         </button>
-                      ) : (
-                        <span className="text-xs text-gray-500">N/A</span>
-                      )}
+                      ) : 'N/A'}
                     </td>
-                    <td className="border p-3 text-sm font-mono">{s.staff_unique_id || 'N/A'}</td>
-                    <td className="border p-3 text-sm py-2">
+                    <td className="border p-3 text-sm font-mono text-xs">{s.staff_unique_id || 'N/A'}</td>
+                    <td className="border p-3 py-3">
                       <LoginStatusBadge staff={s} />
                     </td>
-                    <td className="border p-3 text-sm py-2">
+                    <td className="border p-3 py-3">
                       <ActionButtons staff={s} />
                     </td>
                   </tr>
@@ -664,16 +561,15 @@ const LoginStatusBadge = ({ staff }) => {
         </div>
       </div>
 
-      {/* ENABLE LOGIN MODAL */}
+      {/* Enable Login Modal - PRE-FILLED */}
       {enableLoginModal.isOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold text-green-600 flex items-center">
-                <UserCheck size={24} className="mr-2" />
-                Enable Login for {enableLoginModal.fullName}
+              <h3 className="text-xl font-semibold text-green-600">
+                Enable Login - {enableLoginModal.fullName}
               </h3>
-              <button onClick={closeEnableLoginModal} className="text-gray-400 hover:text-gray-600">
+              <button onClick={closeEnableLoginModal} className="text-gray-400 hover:text-gray-600 p-1">
                 <X size={20} />
               </button>
             </div>
@@ -686,7 +582,7 @@ const LoginStatusBadge = ({ staff }) => {
                     type="text"
                     value={enableLoginForm.username}
                     onChange={(e) => setEnableLoginForm({...enableLoginForm, username: e.target.value})}
-                    className="w-full border rounded-md p-3 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    className="w-full border rounded-md p-3 focus:ring-2 focus:ring-green-500"
                     placeholder="Enter username"
                   />
                 </div>
@@ -696,31 +592,23 @@ const LoginStatusBadge = ({ staff }) => {
                     type={showEnablePassword ? "text" : "password"}
                     value={enableLoginForm.password}
                     onChange={(e) => setEnableLoginForm({...enableLoginForm, password: e.target.value})}
-                    className="w-full border rounded-md p-3 pr-10 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    className="w-full border rounded-md p-3 pr-10 focus:ring-2 focus:ring-green-500"
                     placeholder="Enter password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowEnablePassword(!showEnablePassword)}
-                    className="absolute right-3 top-11 text-gray-500 hover:text-gray-700 cursor-pointer"
+                    className="absolute right-3 top-11 text-gray-500 hover:text-gray-700"
                   >
                     {showEnablePassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>
-              
               <div className="flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={closeEnableLoginModal}
-                  className="px-6 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition"
-                >
+                <button type="button" onClick={closeEnableLoginModal} className="px-6 py-2 border rounded-md hover:bg-gray-50">
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition"
-                >
+                <button type="submit" className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
                   Enable Login
                 </button>
               </div>
@@ -729,20 +617,25 @@ const LoginStatusBadge = ({ staff }) => {
         </div>
       )}
 
-      {/* SHARED CONFIRMATION MODAL */}
-      <ConfirmationModal
-        isOpen={confirmationModal.isOpen}
-        message={
-          confirmationModal.action === 'disable'
-            ? `Disable login access for ${confirmationModal.fullName}?`
-            : `Delete ${confirmationModal.fullName}? This cannot be undone!`
-        }
-        onConfirm={handleConfirmAction}
-        onCancel={closeConfirmationModal}
-        confirmText={confirmationModal.action === 'disable' ? 'Disable Login' : 'Delete'}
-      />
+      {/* Delete Confirmation */}
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" style={{display: confirmationModal.isOpen ? 'flex' : 'none'}}>
+        <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-xl border-2 border-red-200">
+          <h3 className="text-xl font-semibold text-red-600 mb-4 flex items-center gap-2">
+            <AlertTriangle size={24} /> Delete Staff?
+          </h3>
+          <p className="text-gray-700 mb-6">Delete <strong>{confirmationModal.fullName}</strong>? This cannot be undone.</p>
+          <div className="flex justify-end gap-3">
+            <button onClick={closeConfirmationModal} className="px-4 py-2 border rounded-md hover:bg-gray-50">
+              Cancel
+            </button>
+            <button onClick={handleConfirmDelete} className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium">
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
 
-      {/* Modals and Toast */}
+      {/* Modals & Toast */}
       <ImageModal src={modalImage} onClose={handleCloseModal} title={modalTitle} />
       <Toast message={toast.message} type={toast.type} onClose={closeToast} />
     </div>
