@@ -28,15 +28,15 @@ const ToastMessage = ({ message, type, onClose }) => {
 
 const todayDateStr = new Date().toISOString().split("T")[0];
 
-function isEditable(recordDate) {
-  const record = new Date(recordDate);
-  record.setHours(0, 0, 0, 0);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const diffDays =
-    (today.getTime() - record.getTime()) / (1000 * 60 * 60 * 24);
-  return diffDays >= 0 && diffDays <= 2;
-}
+// function isEditable(recordDate) {
+//   const record = new Date(recordDate);
+//   record.setHours(0, 0, 0, 0);
+//   const today = new Date();
+//   today.setHours(0, 0, 0, 0);
+//   const diffDays =
+//     (today.getTime() - record.getTime()) / (1000 * 60 * 60 * 24);
+//   return diffDays >= 0 && diffDays <= 2;
+// }
 
 export default function OtherIncome() {
 
@@ -140,10 +140,10 @@ const handleDeleteIncome = async (record) => {
     return;
   }
 
-  if (!isEditable(record.date)) {
-    showToast("Can only delete income records up to 2 days old", "error");
-    return;
-  }
+  // if (!isEditable(record.date)) {
+  //   showToast("Can only delete income records up to 2 days old", "error");
+  //   return;
+  // }
 
   try {
     const response = await fetch(
@@ -304,10 +304,10 @@ const handleDeleteIncome = async (record) => {
         return;
     }
 
-    if (!isEditable(recordToEdit.date)) {
-      setError("Editing allowed only for records up to 2 days old.");
-      return;
-    }
+    // if (!isEditable(recordToEdit.date)) {
+    //   setError("Editing allowed only for records up to 2 days old.");
+    //   return;
+    // }
 
     setError("");
     setOtp("");
@@ -580,36 +580,24 @@ const handleDeleteIncome = async (record) => {
 <td className="border p-3">
   <div className="flex gap-1">
     {/* 🔥 EXISTING EDIT BUTTON */}
-    <button
-      onClick={() => handleEditClick(record.id)}
-      disabled={!isEditable(record.date) || otpLoading || loading}
-      className={`px-3 py-1 rounded text-xs cursor-pointer font-medium transition-all ${
-        isEditable(record.date)
-          ? "bg-blue-600 text-white hover:bg-blue-700 shadow-md"
-          : "bg-gray-400 text-gray-700 cursor-not-allowed"
-      } ${otpLoading ? "opacity-70" : ""}`}
+ <button
+      type="button"
+      onClick={() => handleEditClick(record.id)}  // ✅ Use record.id
+      disabled={loading || otpLoading}
+      className={`px-3 py-1 rounded text-xs font-medium transition-all flex items-center gap-1 bg-blue-600 text-white hover:bg-blue-700 shadow-md ${otpLoading ? "opacity-70" : ""}`}
+      title="Edit income (requires OTP verification)"
     >
-      {isEditable(record.date) ? "Edit" : "Too Old"}
+      <Edit2 size={12} /> Edit
     </button>
     
     {/* 🔥 NEW DELETE BUTTON - ADMIN ONLY */}
     {isAdmin && (
       <button
         type="button"
-        onClick={() => handleDeleteIncome(record)}
-        disabled={!isEditable(record.date) || loading}
-        className={`p-2 rounded transition-all flex items-center cursor-pointer justify-center ${
-          isEditable(record.date)
-            ? "bg-red-600 text-white hover:bg-red-700 shadow-md active:scale-95"
-            : "bg-gray-400 text-gray-700 cursor-not-allowed"
-        }`}
-        title={
-          !isAdmin 
-            ? "Admin only" 
-            : !isEditable(record.date) 
-            ? "Only 2 days old records deletable" 
-            : "Delete income record"
-        }
+        onClick={() => handleDeleteIncome(record)}  // ✅ Correct function + record
+        disabled={loading}
+        className="p-2 rounded transition-all flex items-center cursor-pointer justify-center bg-red-600 text-white hover:bg-red-700 shadow-md active:scale-95"
+        title="Delete income (Admin only)"
       >
         <Trash2 size={14} />
       </button>

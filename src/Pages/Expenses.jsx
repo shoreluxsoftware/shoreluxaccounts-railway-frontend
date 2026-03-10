@@ -149,10 +149,10 @@ const handleDeleteExpense = async (expense) => {
     return;
   }
 
-  if (!isEditable(expense.date)) {
-    showToast("Can only delete expenses up to 2 days old", "error");
-    return;
-  }
+  // if (!isEditable(expense.date)) {
+  //   showToast("Can only delete expenses up to 2 days old", "error");
+  //   return;
+  // }
 
   try {
     const response = await fetch(
@@ -292,14 +292,14 @@ const handleDeleteExpense = async (expense) => {
   };
 
   // ✅ EDITABLE CHECK
-  const isEditable = (dateStr) => {
-    const d = new Date(dateStr);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    d.setHours(0, 0, 0, 0);
-    const diffDays = (today - d) / (1000 * 60 * 60 * 24);
-    return diffDays >= 0 && diffDays <= 2;
-  };
+  // const isEditable = (dateStr) => {
+  //   const d = new Date(dateStr);
+  //   const today = new Date();
+  //   today.setHours(0, 0, 0, 0);
+  //   d.setHours(0, 0, 0, 0);
+  //   const diffDays = (today - d) / (1000 * 60 * 60 * 24);
+  //   return diffDays >= 0 && diffDays <= 2;
+  // };
 
   // 🔥 RENDER STAFF CODE FIELD (Conditional - FIXED)
   const renderStaffCodeField = (data, isEdit = false, isForm = true) => {
@@ -382,10 +382,10 @@ const handleDeleteExpense = async (expense) => {
   const handleEditClick = async (exp) => {
     console.log("🔍 Edit clicked for:", exp.id, exp.category, exp);
 
-    if (!isEditable(exp.date)) {
-      showToast("Editing allowed only for expenses up to 2 days old", "error");
-      return;
-    }
+    // if (!isEditable(exp.date)) {
+    //   showToast("Editing allowed only for expenses up to 2 days old", "error");
+    //   return;
+    // }
 
     setEditExpense({
       id: exp.id,
@@ -843,38 +843,26 @@ const handleDeleteExpense = async (expense) => {
 <td className="border p-3">
   <div className="flex gap-1">
     {/* 🔥 EXISTING EDIT BUTTON */}
-    <button
+ <button
       type="button"
       onClick={() => handleEditClick(exp)}
-      disabled={!isEditable(exp.date) || loading || otpLoading}
-      className={`px-3 py-1 rounded text-xs cursor-pointer font-medium transition-all flex items-center gap-1 ${
-        isEditable(exp.date)
-          ? "bg-blue-600 text-white hover:bg-blue-700 shadow-md"
-          : "bg-gray-400 text-gray-700 cursor-not-allowed"
+      disabled={loading || otpLoading}
+      className={`px-3 py-1 rounded text-xs font-medium transition-all flex items-center gap-1 ${
+        "bg-blue-600 text-white hover:bg-blue-700 shadow-md"
       } ${otpLoading ? "opacity-70" : ""}`}
-      title={!isEditable(exp.date) ? "Only 2 days old expenses editable" : ""}
+      title="Edit expense (requires OTP verification)"
     >
-      {isEditable(exp.date) ? "Edit" : "Too Old"}
+      Edit
     </button>
     
     {/* 🔥 NEW DELETE BUTTON - ADMIN ONLY */}
     {isAdmin && (
-      <button
+ <button
         type="button"
         onClick={() => handleDeleteExpense(exp)}
-        disabled={!isEditable(exp.date) || loadingTable}
-        className={`p-2 rounded transition-all flex items-center cursor-pointer justify-center ${
-          isEditable(exp.date)
-            ? "bg-red-600 text-white hover:bg-red-700 shadow-md active:scale-95"
-            : "bg-gray-400 text-gray-700 cursor-not-allowed"
-        }`}
-        title={
-          !isAdmin 
-            ? "Admin only" 
-            : !isEditable(exp.date) 
-            ? "Only 2 days old expenses deletable" 
-            : "Delete expense"
-        }
+        disabled={loadingTable}
+        className="p-2 rounded transition-all flex items-center cursor-pointer justify-center bg-red-600 text-white hover:bg-red-700 shadow-md active:scale-95"
+        title="Delete expense (Admin only)"
       >
         <Trash2 size={14} />
       </button>
