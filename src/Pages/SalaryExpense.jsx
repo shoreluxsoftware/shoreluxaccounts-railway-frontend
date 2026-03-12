@@ -42,6 +42,8 @@ const isAdmin = localStorage.getItem("role") === "ADMIN";
     date: new Date().toISOString().split("T")[0],
     amount: "",
     description: "",
+    designation: "",           // 🔥 NEW
+    salary_type: "daily_wage",
     staff_code: "",
     bill_file: null,
     voucher_file: null,
@@ -103,7 +105,7 @@ const isAdmin = localStorage.getItem("role") === "ADMIN";
     setLoadingTable(true);
     try {
       const response = await fetch(
-        `${API_BASE_URL}/staff-management/list-salary-expenses`,
+        `${API_BASE_URL}/staff-management/list-expenses`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -114,10 +116,15 @@ const isAdmin = localStorage.getItem("role") === "ADMIN";
       const result = await handleJsonOrError(response);
       
       // 🔥 Ensure consistent data structure
-      const expensesWithCategory = (result.data || []).map(exp => ({
-        ...exp,
-        category: "Salary",
-      }));
+const expensesWithCategory = (result.data || [])
+  .filter(exp => exp.category === "Salary")  // ← Add this filter
+  .map(exp => ({
+    ...exp,
+    category: "Salary",
+  }));
+
+  console.log(expensesWithCategory,"data");
+  
       
       setExpenses(expensesWithCategory);
       setError("");
@@ -176,6 +183,8 @@ const handleDeleteExpense = async (expense) => {
       !form.amount ||
       !form.description ||
       !form.staff_code.trim() ||
+        !form.designation.trim() ||    // 🔥 NEW
+  !form.salary_type || 
       (!form.bill_file && !form.voucher_file)
     ) {
       showToast(
@@ -195,10 +204,13 @@ const handleDeleteExpense = async (expense) => {
 
     try {
       const formData = new FormData();
+      formData.append("category", "Salary");
       formData.append("date", form.date);
       formData.append("amount", parseFloat(form.amount));
       formData.append("description", form.description);
       formData.append("staff_code", form.staff_code.trim());
+      formData.append("designation", form.designation.trim());  // 🔥 ADD THIS
+formData.append("salary_type", form.salary_type); 
 
       if (form.bill_file) {
         formData.append("bill_file", form.bill_file);
@@ -208,27 +220,30 @@ const handleDeleteExpense = async (expense) => {
         formData.append("voucher_no", form.voucher_no);
       }
 
-      const response = await fetch(
-        `${API_BASE_URL}/staff-management/create-salary-expense`,
-        {
-          method: "POST",
-          headers: getAuthHeaders(),
-          body: formData,
-        }
+const response = await fetch(
+  `${API_BASE_URL}/staff-management/add-expense`,  // ← Changed
+  {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: formData,
+  }
       );
 
       await handleJsonOrError(response);
 
       showToast("Salary expense added successfully!", "success");
-      setForm({
-        date: new Date().toISOString().split("T")[0],
-        amount: "",
-        description: "",
-        staff_code: "",
-        bill_file: null,
-        voucher_file: null,
-        voucher_no: "",
-      });
+setForm({
+  date: new Date().toISOString().split("T")[0],
+  amount: "",
+  description: "",
+  staff_code: "",
+  designation: "",           // 🔥 NEW
+  salary_type: "daily_wage", // 🔥 NEW
+  bill_file: null,
+  voucher_file: null,
+  voucher_no: "",
+});
+
       await fetchExpenses();
     } catch (err) {
       console.error("Add salary expense error:", err);
@@ -312,17 +327,20 @@ const handleDeleteExpense = async (expense) => {
     //   return;
     // }
 
-    setEditExpense({
-      id: exp.id,
-      date: exp.date,
-      category: "Salary",
-      amount: exp.amount,
-      description: exp.description || "",
-      staff_code: exp.staff_code || "",
-      bill_file: exp.bill_file,
-      voucher_file: exp.voucher_file,
-      voucher_no: exp.voucher_no || "",
-    });
+setEditExpense({
+  id: exp.id,
+  date: exp.date,
+  category: "Salary",
+  amount: exp.amount,
+  description: exp.description || "",
+  staff_code: exp.staff_code || "",
+  designation: exp.designation || "",    // 🔥 NEW
+  salary_type: exp.salary_type || "daily_wage", // 🔥 NEW
+  bill_file: exp.bill_file,
+  voucher_file: exp.voucher_file,
+  voucher_no: exp.voucher_no || "",
+});
+
 
     setError("");
     setOtp("");
@@ -443,10 +461,13 @@ const handleDeleteExpense = async (expense) => {
     setEditLoading(true);
 
     const formData = new FormData();
+    formData.append("category", "Salary"); 
     formData.append("amount", parseFloat(editExpense.amount));
     formData.append("description", editExpense.description.trim());
     formData.append("staff_code", editExpense.staff_code.trim());
     formData.append("date", editExpense.date);
+    formData.append("designation", editExpense.designation.trim());  // 🔥 ADD THIS
+formData.append("salary_type", editExpense.salary_type); 
 
     if (editExpense.bill_file && editExpense.bill_file instanceof File) {
       formData.append("bill_file", editExpense.bill_file);
@@ -461,14 +482,14 @@ const handleDeleteExpense = async (expense) => {
   }
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/staff-management/update-salary-expense/${editExpense.id}`,
-        {
-          method: "PUT",
-          headers: getAuthHeaders(),
-          body: formData,
-        }
-      );
+  const response = await fetch(
+  `${API_BASE_URL}/staff-management/update-expense/${editExpense.id}`,  // ← Changed
+   {
+    method: "PUT",
+    headers: getAuthHeaders(),
+    body: formData,
+   }
+    );
 
       await handleJsonOrError(response);
 
@@ -516,6 +537,40 @@ const renderStaffCodeField = (data, isEdit = false, isForm = true) => {
           disabled={isEdit || loading || editLoading}
         />
       </div>
+      
+      {/* 🔥 FIX: Use data.designation, NOT form.designation */}
+      <div className="mb-6">
+        <label className="text-sm font-medium block mb-1">
+          Designation * <span className="text-xs text-red-500">(Required)</span>
+        </label>
+        <input
+          type="text"
+          name="designation"
+          value={data.designation || ""}  // 🔥 FIXED
+          onChange={isForm ? handleChange : handleEditChange}  // 🔥 FIXED
+          placeholder="Housekeeping, Cook, Manager"
+          className="w-full border-b-2 border-dotted border-black p-2 bg-transparent text-sm"
+          disabled={loading || editLoading}
+        />
+      </div>
+
+      {/* 🔥 FIX: Use data.salary_type, NOT form.salary_type */}
+      <div className="mb-6">
+        <label className="text-sm font-medium block mb-1">
+          Salary Type * <span className="text-xs text-red-500">(Required)</span>
+        </label>
+        <select
+          name="salary_type"
+          value={data.salary_type || "daily_wage"}  // 🔥 FIXED
+          onChange={isForm ? handleChange : handleEditChange}  // 🔥 FIXED
+          disabled={loading || editLoading}
+          className="w-full border-b-2 border-dotted border-black p-2 bg-transparent text-sm"
+        >
+          <option value="daily_wage">Daily Wage</option>
+          <option value="monthly">Monthly</option>
+        </select>
+      </div>
+
       
       {/* 🔥 VOUCHER NO FIELD - ONLY SHOW WHEN VOUCHER EXISTS */}
       {(data.voucher_file || data.voucher_no) && (
@@ -724,6 +779,8 @@ const renderStaffCodeField = (data, isEdit = false, isForm = true) => {
                 <th className="border p-3">Amount (₹)</th>
                 <th className="border p-3 max-w-xs">Description</th>
                 <th className="border p-3">Voucher No.</th>
+                <th className="border p-3">Designation</th>
+<th className="border p-3">Type</th>
                 <th className="border p-3 w-20">Files</th>
                 <th className="border p-3">Actions</th>
               </tr>
@@ -731,7 +788,7 @@ const renderStaffCodeField = (data, isEdit = false, isForm = true) => {
             <tbody>
               {loadingTable ? (
                 <tr>
-                  <td colSpan="9" className="text-center py-8 text-blue-500">
+                  <td colSpan="11" className="text-center py-8 text-blue-500">
                     Loading salary expenses...
                   </td>
                 </tr>
@@ -760,6 +817,10 @@ const renderStaffCodeField = (data, isEdit = false, isForm = true) => {
                       {exp.description || "-"}
                     </td>
                     <td className="border p-3 font-mono text-xs">{exp.voucher_no || "-"}</td>
+                    <td className="border p-3 text-xs">{exp.designation || "-"}</td>
+<td className="border p-3 text-xs capitalize">
+  {exp.salary_type?.replace('_', ' ') || "-"}
+</td>
                     <td className="border p-3">
                       <div className="space-y-1">
                         {exp.bill_file && (

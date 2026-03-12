@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Eye, EyeOff, X, Trash2, CheckCircle, AlertTriangle, UserCheck, UserX } from "lucide-react"; 
 
-// --- Custom Components (KEEPING YOUR ORIGINAL) ---
+// --- Custom Components (UNCHANGED) ---
 const Toast = ({ message, type, onClose }) => {
   if (!message) return null;
 
@@ -72,7 +72,6 @@ const ImageModal = ({ src, onClose, title }) => {
   );
 };
 
-// 🔥 SIMPLE TOGGLE SWITCH COMPONENT
 const ToggleSwitch = ({ checked, onChange, disabled = false }) => (
   <label className="relative inline-flex items-center cursor-pointer">
     <input
@@ -94,7 +93,7 @@ const StaffCreate = () => {
 
   // State
   const [form, setForm] = useState({
-    first_name: "", last_name: "", age: "", phone_number: "", aadhaar_number: "",
+    first_name: "", last_name: "", designation: "", age: "", phone_number: "", aadhaar_number: "",
     aadhaarPhoto: null, profile_image: null, date: new Date().toISOString().split("T")[0],
   });
   const [aadhaarPreview, setAadhaarPreview] = useState(null);
@@ -170,7 +169,7 @@ const StaffCreate = () => {
   };
 
   const validateForm = () => {
-    if (!form.first_name?.trim() || !form.last_name?.trim() || !form.age || 
+    if (!form.first_name?.trim() || !form.last_name?.trim() || !form.age || !form.designation?.trim() ||
         !form.phone_number || !form.aadhaar_number || !form.aadhaarPhoto || 
         !form.profile_image) {
       showToast("All fields are required", 'error');
@@ -194,6 +193,7 @@ const StaffCreate = () => {
     const formData = new FormData();
     formData.append('first_name', form.first_name);
     formData.append('last_name', form.last_name);
+    formData.append('designation', form.designation);
     formData.append('age', form.age);
     formData.append('phone_number', form.phone_number);
     formData.append('aadhaar_number', form.aadhaar_number);
@@ -228,58 +228,50 @@ const StaffCreate = () => {
     }
   };
 
-  // 🔥 TOGGLE HANDLER - SIMPLE & PERFECT
-// 🔥 FIXED TOGGLE HANDLER - SIMPLE & PERFECT
-const handleToggleLogin = async (staff) => {
-  const isEnabled = staff.can_login === true && staff.username?.trim();
-  
-  // 🔥 IF ENABLING LOGIN → Open Modal (needs username/password)
-  if (!isEnabled) {
-    openEnableLoginModal(staff);
-    return;
-  }
-  
-  // 🔥 IF DISABLING LOGIN → Direct API call (no credentials needed)
-  try {
-    setLoading(true);
-    const res = await fetch(`${BACKEND_URL}/admin-management/disable-login/${staff.id}`, {
-      method: 'POST',
-      headers: { 
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({}) // Empty body for disable
-    });
-
-    const data = await res.json();
+  const handleToggleLogin = async (staff) => {
+    const isEnabled = staff.can_login === true && staff.username?.trim();
     
-    if (res.ok) {
-      showToast('Login disabled successfully!', 'success');
-      fetchStaffList();
-    } else {
-      showToast(data.error || data.detail || 'Failed to disable login', 'error');
+    if (!isEnabled) {
+      openEnableLoginModal(staff);
+      return;
     }
-  } catch (err) {
-    showToast("Network error", 'error');
-  } finally {
-    setLoading(false);
-  }
-};
+    
+    try {
+      setLoading(true);
+      const res = await fetch(`${BACKEND_URL}/admin-management/disable-login/${staff.id}`, {
+        method: 'POST',
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({})
+      });
 
+      const data = await res.json();
+      
+      if (res.ok) {
+        showToast('Login disabled successfully!', 'success');
+        fetchStaffList();
+      } else {
+        showToast(data.error || data.detail || 'Failed to disable login', 'error');
+      }
+    } catch (err) {
+      showToast("Network error", 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Enable login modal
-// NEW (BLANK username field)
-const openEnableLoginModal = (staff) => {
-  setEnableLoginModal({
-    isOpen: true,
-    staffId: staff.id,
-    fullName: `${staff.first_name} ${staff.last_name}`,
-    existingUsername: staff.username || '',
-  });
-  setEnableLoginForm({ username: '', password: '' }); // ✅ ALWAYS BLANK!
-  setShowEnablePassword(false);
-};
-
+  const openEnableLoginModal = (staff) => {
+    setEnableLoginModal({
+      isOpen: true,
+      staffId: staff.id,
+      fullName: `${staff.first_name} ${staff.last_name}`,
+      existingUsername: staff.username || '',
+    });
+    setEnableLoginForm({ username: '', password: '' });
+    setShowEnablePassword(false);
+  };
 
   const closeEnableLoginModal = () => {
     setEnableLoginModal({ isOpen: false, staffId: null, fullName: "", existingUsername: "" });
@@ -315,7 +307,6 @@ const openEnableLoginModal = (staff) => {
     }
   };
 
-  // Confirmation modal handlers
   const openConfirmationModal = (staffId, fullName) => {
     setConfirmationModal({ isOpen: true, staffId, fullName, action: 'delete' });
   };
@@ -344,7 +335,6 @@ const openEnableLoginModal = (staff) => {
     closeConfirmationModal();
   };
 
-  // Status Badge & Actions
   const LoginStatusBadge = ({ staff }) => {
     const isEnabled = staff.can_login === true && staff.username?.trim();
     return (
@@ -360,73 +350,85 @@ const openEnableLoginModal = (staff) => {
     );
   };
 
-const ActionButtons = ({ staff }) => {
-  const isEnabled = staff.can_login === true && staff.username?.trim();
-  
-  return (
-    <div className="flex items-center gap-3">
-      {/* 🔥 PERFECT TOGGLE BEHAVIOR */}
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-medium text-gray-700">Login:</span>
-        <ToggleSwitch 
-          checked={isEnabled}
-          onChange={() => handleToggleLogin(staff)}  // Now opens modal when enabling!
+  const ActionButtons = ({ staff }) => {
+    const isEnabled = staff.can_login === true && staff.username?.trim();
+    
+    return (
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-gray-700">Login:</span>
+          <ToggleSwitch 
+            checked={isEnabled}
+            onChange={() => handleToggleLogin(staff)}
+            disabled={loading}
+          />
+        </div>
+        <button
+          onClick={() => openConfirmationModal(staff.id, `${staff.first_name} ${staff.last_name}`)}
+          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all hover:scale-105"
+          title="Delete Staff"
           disabled={loading}
-        />
+        >
+          <Trash2 size={16} />
+        </button>
       </div>
-      
-      <button
-        onClick={() => openConfirmationModal(staff.id, `${staff.first_name} ${staff.last_name}`)}
-        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all hover:scale-105"
-        title="Delete Staff"
-        disabled={loading}
-      >
-        <Trash2 size={16} />
-      </button>
-    </div>
-  );
-};
-
+    );
+  };
 
   return (
     <div className="bg-[#F1F2F4] px-6 py-8 min-h-screen">
-      {/* Your ORIGINAL Form - NO CHANGES */}
-      <form onSubmit={handleSubmit} className="bg-white shadow-md border border-gray-300 rounded-xl p-8 mb-8 max-w-5xl mx-auto">
-        <h2 className="text-2xl font-semibold mb-8">Add Staff Member</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
-          <div className="space-y-6">
+      {/* 🔥 FIXED & WIDER FORM - SAME DESIGN */}
+      <form onSubmit={handleSubmit} className="bg-white shadow-md border border-gray-300 rounded-xl p-10 mb-8 max-w-7xl mx-auto">
+        <h2 className="text-3xl font-semibold mb-10 text-center">Add Staff Member</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-x-8 gap-y-8 w-full">
+          {/* 🔥 LEFT COLUMN - BETTER ALIGNMENT */}
+          <div className="lg:col-span-1 space-y-6">
             <div>
-              <label className="block mb-1 text-sm font-medium">Date</label>
+              <label className="block mb-2 text-sm font-medium text-gray-700">Date</label>
               <input
                 type="date"
                 name="date"
                 value={form.date}
                 onChange={handleChange}
-                className="w-full border-b-2 border-dotted border-black p-2 bg-gray-200 text-sm"
+                className="w-full border-b-2 border-dotted border-black p-3 bg-gray-200 text-sm focus:outline-none"
               />
             </div>
             <div>
-              <label className="block mb-1 text-sm font-medium">Last Name *</label>
+              <label className="block mb-2 text-sm font-medium text-gray-700">Last Name *</label>
               <input
                 name="last_name"
                 value={form.last_name}
                 onChange={handleChange}
-                className="w-full border-b-2 border-dotted border-black p-2 bg-transparent text-sm"
+                className="w-full border-b-2 border-dotted border-black p-3 bg-transparent text-sm focus:outline-none"
+                placeholder="Enter last name"
               />
             </div>
           </div>
-          <div className="space-y-6">
+
+          {/* 🔥 SECOND COLUMN */}
+          <div className="lg:col-span-1 space-y-6">
             <div>
-              <label className="block mb-1 text-sm font-medium">First Name *</label>
+              <label className="block mb-2 text-sm font-medium text-gray-700">First Name *</label>
               <input
                 name="first_name"
                 value={form.first_name}
                 onChange={handleChange}
-                className="w-full border-b-2 border-dotted border-black p-2 bg-transparent text-sm"
+                className="w-full border-b-2 border-dotted border-black p-3 bg-transparent text-sm focus:outline-none"
+                placeholder="Enter first name"
               />
             </div>
             <div>
-              <label className="block mb-1 text-sm font-medium">Age *</label>
+              <label className="block mb-2 text-sm font-medium text-gray-700">Designation *</label>
+              <input
+                name="designation"
+                placeholder="e.g. Chef, Manager"
+                value={form.designation}
+                onChange={handleChange}
+                className="w-full border-b-2 border-dotted border-black p-3 bg-transparent text-sm focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block mb-2 text-sm font-medium text-gray-700">Age *</label>
               <input
                 name="age"
                 type="number"
@@ -434,124 +436,169 @@ const ActionButtons = ({ staff }) => {
                 max={100}
                 value={form.age}
                 onChange={handleChange}
-                className="w-full border-b-2 border-dotted border-black p-2 bg-transparent text-sm"
+                className="w-full border-b-2 border-dotted border-black p-3 bg-transparent text-sm focus:outline-none"
+                placeholder="Enter age"
               />
             </div>
           </div>
-          <div className="space-y-6">
+
+          {/* 🔥 THIRD COLUMN - PHONE & AADHAAR */}
+          <div className="lg:col-span-1 space-y-6">
             <div>
-              <label className="block mb-1 text-sm font-medium">Phone *</label>
+              <label className="block mb-2 text-sm font-medium text-gray-700">Phone Number *</label>
               <input
                 name="phone_number"
                 type="text" 
                 maxLength={10}
                 value={form.phone_number}
                 onChange={handleChange}
-                className="w-full border-b-2 border-dotted border-black p-2 bg-transparent text-sm"
+                className="w-full border-b-2 border-dotted border-black p-3 bg-transparent text-sm focus:outline-none"
+                placeholder="10 digit phone"
               />
             </div>
             <div>
-              <label className="block mb-1 text-sm font-medium">Aadhaar *</label>
+              <label className="block mb-2 text-sm font-medium text-gray-700">Aadhaar Number *</label>
               <input
                 name="aadhaar_number"
                 type="text" 
                 maxLength={12}
                 value={form.aadhaar_number}
                 onChange={handleChange}
-                className="w-full border-b-2 border-dotted border-black p-2 bg-transparent text-sm"
+                className="w-full border-b-2 border-dotted border-black p-3 bg-transparent text-sm focus:outline-none"
+                placeholder="12 digit aadhaar"
               />
             </div>
           </div>
-          <div className="space-y-6">
+
+          {/* 🔥 FOURTH COLUMN - UPLOADS */}
+          <div className="lg:col-span-1 space-y-6">
             <div>
-              <label className="block mb-1 text-sm font-medium">Aadhaar Photo *</label>
-              <input type="file" name="aadhaarPhoto" accept="image/*" onChange={handleChange} className="text-sm block w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-100 hover:file:bg-gray-200"/>
-              {aadhaarPreview && <img className="h-20 mt-2 rounded border cursor-pointer object-cover" src={aadhaarPreview} alt="Aadhaar Preview" onClick={() => handleOpenModal(aadhaarPreview, "Aadhaar Photo Preview")} />}
+              <label className="block mb-2 text-sm font-medium text-gray-700">Aadhaar Photo *</label>
+              <input 
+                type="file" 
+                name="aadhaarPhoto" 
+                accept="image/*" 
+                onChange={handleChange} 
+                className="text-sm block w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-100 hover:file:bg-gray-200"
+              />
+              {aadhaarPreview && (
+                <img 
+                  className="h-24 w-32 mt-3 rounded-lg border-2 border-gray-300 cursor-pointer object-cover hover:border-blue-500 transition-all" 
+                  src={aadhaarPreview} 
+                  alt="Aadhaar Preview" 
+                  onClick={() => handleOpenModal(aadhaarPreview, "Aadhaar Photo Preview")}
+                />
+              )}
             </div>
             <div>
-              <label className="block mb-1 text-sm font-medium">Profile Picture *</label>
-              <input type="file" name="profile_image" accept="image/*" onChange={handleChange} className="text-sm block w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-100 hover:file:bg-gray-200"/>
-              {profilePreview && <img className="h-20 w-20 mt-2 rounded-full border object-cover cursor-pointer" src={profilePreview} alt="Profile Preview" onClick={() => handleOpenModal(profilePreview, "Profile Picture Preview")} />}
+              <label className="block mb-2 text-sm font-medium text-gray-700">Profile Picture *</label>
+              <input 
+                type="file" 
+                name="profile_image" 
+                accept="image/*" 
+                onChange={handleChange} 
+                className="text-sm block w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-100 hover:file:bg-gray-200"
+              />
+              {profilePreview && (
+                <img 
+                  className="h-24 w-24 mt-3 rounded-full border-2 border-gray-300 cursor-pointer object-cover hover:border-blue-500 transition-all mx-auto" 
+                  src={profilePreview} 
+                  alt="Profile Preview" 
+                  onClick={() => handleOpenModal(profilePreview, "Profile Picture Preview")}
+                />
+              )}
             </div>
           </div>
         </div>
         <button 
           type="submit" 
           disabled={loading}
-          className="w-full mt-10 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition duration-150 disabled:opacity-50"
+          className="w-full mt-12 py-3 bg-black text-white text-lg rounded-md hover:bg-gray-800 transition duration-150 disabled:opacity-50 font-medium"
         >
-          {loading ? 'Creating...' : 'Create Staff'}
+          {loading ? 'Creating...' : 'Create Staff Member'}
         </button>
       </form>
 
-      {/* Staff List - SIMPLIFIED */}
-      <div className="bg-white border shadow-md rounded-lg p-6 max-w-5xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold">Staff Members ({staffList.length})</h2>
+      {/* 🔥 FIXED TABLE - CORRECT COLUMN ORDER */}
+      <div className="bg-white border shadow-md rounded-lg p-6 max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-2xl font-semibold">Staff Members ({staffList.length})</h2>
           <button 
             onClick={fetchStaffList}
             disabled={loading}
-            className="px-4 py-2 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition disabled:opacity-50"
+            className="px-6 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition disabled:opacity-50 font-medium"
           >
-            Refresh
+            Refresh List
           </button>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] border-collapse">
+          <table className="w-full min-w-[1000px] border-collapse">
             <thead className="bg-gray-800 text-white">
               <tr>
-                <th className="border p-3 text-sm text-left">S.No.</th>
-                <th className="border p-3 text-sm text-left">Photo</th>
-                <th className="border p-3 text-sm text-left">Name</th>
-                <th className="border p-3 text-sm text-left">Age</th>
-                <th className="border p-3 text-sm text-left">Phone</th>
-                <th className="border p-3 text-sm text-left">Aadhaar</th>
-                <th className="border p-3 text-sm text-left">ID</th>
-                <th className="border p-3 text-sm text-left">Status</th>
-                <th className="border p-3 text-sm text-left">Actions</th>
+                <th className="border p-4 text-sm text-left font-semibold">S.No.</th>
+                <th className="border p-4 text-sm text-left font-semibold">Photo</th>
+                <th className="border p-4 text-sm text-left font-semibold">Name</th>
+                <th className="border p-4 text-sm text-left font-semibold">Designation</th>
+                <th className="border p-4 text-sm text-left font-semibold">Age</th>
+                <th className="border p-4 text-sm text-left font-semibold">Phone</th>
+                <th className="border p-4 text-sm text-left font-semibold">Aadhaar</th>
+                <th className="border p-4 text-sm text-left font-semibold">Staff ID</th>
+                <th className="border p-4 text-sm text-left font-semibold">Status</th>
+                <th className="border p-4 text-sm text-left font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody>
               {staffList.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="text-center py-12 text-gray-500">
-                    No staff added yet
+                  <td colSpan="10" className="text-center py-16 text-gray-500 text-xl">
+                    No staff members added yet
                   </td>
                 </tr>
               ) : (
-                staffList.map((s, i) => (
-                  <tr key={s.id} className="hover:bg-gray-50 border-b">
-                    <td className="border p-3 text-sm font-medium">{i + 1}</td>
-                    <td className="border p-3">
-                      {s.profile_image ? (
+                staffList.map((staff, index) => (
+                  <tr key={staff.id} className="hover:bg-gray-50 border-b transition-colors">
+                    <td className="border p-4 text-sm font-medium text-gray-900">{index + 1}</td>
+                    <td className="border p-4">
+                      {staff.profile_image ? (
                         <img 
-                          src={s.profile_image} 
+                          src={staff.profile_image} 
                           alt="Profile"
-                          className="h-12 w-12 rounded-full object-cover mx-auto cursor-pointer border-2 border-gray-300 hover:border-blue-500 transition"
-                          onClick={() => handleOpenModal(s.profile_image, `${s.first_name} ${s.last_name}'s Profile`)}
+                          className="h-14 w-14 rounded-full object-cover mx-auto cursor-pointer border-2 border-gray-300 hover:border-blue-500 hover:scale-105 transition-all shadow-md"
+                          onClick={() => handleOpenModal(staff.profile_image, `${staff.first_name} ${staff.last_name}'s Profile`)}
                         />
-                      ) : 'N/A'}
+                      ) : (
+                        <div className="h-14 w-14 bg-gray-200 rounded-full mx-auto flex items-center justify-center text-gray-500 text-xs font-medium">
+                          No Photo
+                        </div>
+                      )}
                     </td>
-                    <td className="border p-3 text-sm font-medium">{s.first_name} {s.last_name}</td>
-                    <td className="border p-3 text-sm">{s.age}</td>
-                    <td className="border p-3 text-sm">{s.phone_number}</td>
-                    <td className="border p-3 text-sm">
-                      {s.aadhaar_card ? (
+                    <td className="border p-4 text-sm font-semibold text-gray-900">
+                      {staff.first_name} {staff.last_name}
+                    </td>
+                    <td className="border p-4 text-sm font-medium text-gray-700">{staff.designation}</td>
+                    <td className="border p-4 text-sm text-gray-700">{staff.age}</td>
+                    <td className="border p-4 text-sm font-mono text-gray-700">{staff.phone_number}</td>
+                    <td className="border p-4 text-sm">
+                      {staff.aadhaar_card ? (
                         <button 
-                          className="text-blue-600 hover:text-blue-800 text-xs font-medium underline"
-                          onClick={() => handleOpenModal(s.aadhaar_card, `${s.first_name} ${s.last_name}'s Aadhaar`)}
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium underline hover:no-underline flex items-center gap-1"
+                          onClick={() => handleOpenModal(staff.aadhaar_card, `${staff.first_name} ${staff.last_name}'s Aadhaar`)}
                         >
-                          View
+                          View Aadhaar
                         </button>
-                      ) : 'N/A'}
+                      ) : (
+                        <span className="text-gray-500 text-sm italic">N/A</span>
+                      )}
                     </td>
-                    <td className="border p-3 text-sm font-mono text-xs">{s.staff_unique_id || 'N/A'}</td>
-                    <td className="border p-3 py-3">
-                      <LoginStatusBadge staff={s} />
+                    <td className="border p-4 text-sm font-mono text-xs bg-gray-50 px-3 py-2 rounded font-medium">
+                      {staff.staff_unique_id || 'N/A'}
                     </td>
-                    <td className="border p-3 py-3">
-                      <ActionButtons staff={s} />
+                    <td className="border p-4 py-4">
+                      <LoginStatusBadge staff={staff} />
+                    </td>
+                    <td className="border p-4 py-4">
+                      <ActionButtons staff={staff} />
                     </td>
                   </tr>
                 ))
@@ -561,54 +608,54 @@ const ActionButtons = ({ staff }) => {
         </div>
       </div>
 
-      {/* Enable Login Modal - PRE-FILLED */}
+      {/* Enable Login Modal */}
       {enableLoginModal.isOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold text-green-600">
+          <div className="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-semibold text-green-600">
                 Enable Login - {enableLoginModal.fullName}
               </h3>
-              <button onClick={closeEnableLoginModal} className="text-gray-400 hover:text-gray-600 p-1">
-                <X size={20} />
+              <button onClick={closeEnableLoginModal} className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition">
+                <X size={24} />
               </button>
             </div>
             
             <form onSubmit={handleEnableLoginSubmit}>
-              <div className="space-y-4 mb-6">
+              <div className="space-y-6 mb-8">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Username *</label>
+                  <label className="block text-sm font-semibold mb-3 text-gray-700">Username *</label>
                   <input
                     type="text"
                     value={enableLoginForm.username}
                     onChange={(e) => setEnableLoginForm({...enableLoginForm, username: e.target.value})}
-                    className="w-full border rounded-md p-3 focus:ring-2 focus:ring-green-500"
-                    placeholder="Enter username"
+                    className="w-full border-2 border-gray-200 rounded-xl p-4 focus:ring-4 focus:ring-green-200 focus:border-green-500 transition-all"
+                    placeholder="Enter unique username"
                   />
                 </div>
                 <div className="relative">
-                  <label className="block text-sm font-medium mb-2">Password *</label>
+                  <label className="block text-sm font-semibold mb-3 text-gray-700">Password *</label>
                   <input
                     type={showEnablePassword ? "text" : "password"}
                     value={enableLoginForm.password}
                     onChange={(e) => setEnableLoginForm({...enableLoginForm, password: e.target.value})}
-                    className="w-full border rounded-md p-3 pr-10 focus:ring-2 focus:ring-green-500"
-                    placeholder="Enter password"
+                    className="w-full border-2 border-gray-200 rounded-xl p-4 pr-12 focus:ring-4 focus:ring-green-200 focus:border-green-500 transition-all"
+                    placeholder="Enter secure password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowEnablePassword(!showEnablePassword)}
-                    className="absolute right-3 top-11 text-gray-500 hover:text-gray-700"
+                    className="absolute right-4 top-[3.5rem] text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100 transition"
                   >
-                    {showEnablePassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    {showEnablePassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
               </div>
-              <div className="flex justify-end gap-3">
-                <button type="button" onClick={closeEnableLoginModal} className="px-6 py-2 border rounded-md hover:bg-gray-50">
+              <div className="flex justify-end gap-4 pt-4 border-t">
+                <button type="button" onClick={closeEnableLoginModal} className="px-8 py-3 border-2 border-gray-300 rounded-xl hover:bg-gray-50 font-medium transition-all">
                   Cancel
                 </button>
-                <button type="submit" className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
+                <button type="submit" className="px-8 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 font-semibold shadow-lg hover:shadow-xl transition-all">
                   Enable Login
                 </button>
               </div>
@@ -619,17 +666,17 @@ const ActionButtons = ({ staff }) => {
 
       {/* Delete Confirmation */}
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" style={{display: confirmationModal.isOpen ? 'flex' : 'none'}}>
-        <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-xl border-2 border-red-200">
-          <h3 className="text-xl font-semibold text-red-600 mb-4 flex items-center gap-2">
-            <AlertTriangle size={24} /> Delete Staff?
+        <div className="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl border-4 border-red-100">
+          <h3 className="text-2xl font-bold text-red-600 mb-6 flex items-center gap-3 justify-center">
+            <AlertTriangle size={32} /> Delete Staff?
           </h3>
-          <p className="text-gray-700 mb-6">Delete <strong>{confirmationModal.fullName}</strong>? This cannot be undone.</p>
-          <div className="flex justify-end gap-3">
-            <button onClick={closeConfirmationModal} className="px-4 py-2 border rounded-md hover:bg-gray-50">
+          <p className="text-gray-700 text-lg mb-8 text-center">Are you sure you want to delete <strong className="font-bold text-red-600 block text-xl">{confirmationModal.fullName}</strong>? This action cannot be undone.</p>
+          <div className="flex justify-center gap-6">
+            <button onClick={closeConfirmationModal} className="px-8 py-3 border-2 border-gray-300 rounded-xl hover:bg-gray-50 font-semibold transition-all">
               Cancel
             </button>
-            <button onClick={handleConfirmDelete} className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium">
-              Delete
+            <button onClick={handleConfirmDelete} className="px-8 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 font-bold shadow-lg hover:shadow-xl transition-all">
+              Delete Staff
             </button>
           </div>
         </div>

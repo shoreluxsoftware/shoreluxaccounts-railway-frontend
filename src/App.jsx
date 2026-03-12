@@ -76,6 +76,7 @@ const App = () => {
                 <Route path="/vouchercreate" element={getProtectedElement(VoucherCreate)} />
                 <Route path="/cafeteriaexpense" element={getProtectedElement(CafeExpense)} />
                 <Route path="/salaryexpense" element={getProtectedElement(SalaryExpense)} />
+                
             </Routes>
         </div>
     );

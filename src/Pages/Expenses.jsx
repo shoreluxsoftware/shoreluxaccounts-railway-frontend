@@ -32,7 +32,7 @@ const ToastMessage = ({ message, type, onClose }) => {
 
 const expenseCategories = [
   "Laundry",
-  "Salary",
+  // "Salary",
   "Cleaning",
   "Mess",
   "Rental",
@@ -766,7 +766,7 @@ const handleDeleteExpense = async (expense) => {
                 <th className="border p-3">Amount (₹)</th>
                 <th className="border p-3 max-w-xs">Description</th>
                 <th className="border p-3">Voucher No.</th>
-                 <th className="border p-3 w-24">Staff Code</th> 
+                 {/* <th className="border p-3 w-24">Staff Code</th>  */}
                 <th className="border p-3 w-20">Files</th>
                 <th className="border p-3">Actions</th>
               </tr>
@@ -800,9 +800,9 @@ const handleDeleteExpense = async (expense) => {
                       {exp.description || "-"}
                     </td>
                     <td className="border p-3 font-mono text-xs">{exp.voucher_no || "-"}</td>
-                    <td className="border p-3 font-mono text-xs bg-gray-50">
+                    {/* <td className="border p-3 font-mono text-xs bg-gray-50">
                       <span className="font-semibold">{exp.staff_code || "-"}</span>
-                    </td>
+                    </td> */}
                     <td className="border p-3">
                       <div className="space-y-1">
                         {exp.bill_file && (

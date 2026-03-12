@@ -57,8 +57,7 @@ const Login = () => {
       localStorage.setItem("refresh_token", data.token.refresh);
       localStorage.setItem("role", data.role);
       localStorage.setItem("username", data.username);
-      localStorage.setItem("staff_code", staffCodeToStore);
-
+localStorage.setItem("username", data.username || form.username);
       // 3. 🔥 Console Log the saved data for debugging
       console.log("--- Login Successful ---");
       console.log("Access Token:", data.token.access);

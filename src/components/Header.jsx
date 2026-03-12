@@ -74,70 +74,71 @@ const Header = (props) => {
 
 
   // 🔥 UPDATED MENU STRUCTURE
-  const menus = [
-    { title: "Dashboard", path: "/home" },
-    {
-      title: "Bookings",
-      children: [
-        { name: "Add Booking", path: "/booking" },
-        { name: "Booking List", path: "/bookinglist" },
-      ],
-    },
-    { title: "Create Voucher", path: "/vouchercreate" },
-    
-    // 🔥 EXPENSES DROPDOWN (Salary Expense moved here)
-    {
-      title: "Expenses",path:"/expenses"
-      // children: [
-      //   { name: "General Expenses", path: "/expenses" },
-      //   { name: "Salary Expense", path: "/salaryexpense" },
-      // ],
-    },
-    
-    // 🔥 CAFETERIA DROPDOWN
-    {
-      title: "Cafeteria",
-      children: [
-        { name: "Cafeteria Sales", path: "/sales" },
-        { name: "Cafeteria Expense", path: "/cafeteriaexpense" },
-      ],
-    },
-    
-    {
-      title: "Income",
-      children: [
-        { name: "Other Income", path: "/otherincome" },
-      ],
-    },
-    { title: "Stock Management", path: "/stockmanage" },
-    {
-      title: "Operations",
-      children: [
-        { name: "Laundry", path: "/laundry" },
-        { name: "Room Cleaning", path: "/cleaning" },
-      ],
-    },
-    
-    // 🔥 LEDGER + DAYBOOK DROPDOWN
-    {
-      title: "Accounts",
-      children: [
-        { name: "Daybook", path: "/daybook" },
-        { name: "Ledger", path: "/ledger" },
-      ],
-    },
-    
-    // Staff Creation: visible ONLY if role is "ADMIN"
-    ...(role === "ADMIN" ? [{ title: "Staff Creation", path: "/staffcreation" }] : []),
-    
-    {
-      title: "Reports",
-      children: [
-        { name: "Income Reports", path: "/incomereports" },
-        { name: "Expense Reports", path: "/expensereports" },
-      ],
-    },
-  ];
+const menus = [
+  { title: "Dashboard", path: "/home" },
+  {
+    title: "Bookings",
+    children: [
+      { name: "Add Booking", path: "/booking" },
+      { name: "Booking List", path: "/bookinglist" },
+    ],
+  },
+  { title: "Create Voucher", path: "/vouchercreate" },
+  
+  // 🔥 FIXED: Expenses DROPDOWN with Salary INSIDE
+  {
+    title: "Expenses",
+    children: [
+      { name: "General Expenses", path: "/expenses" },
+      { name: "Salary Expense", path: "/salaryexpense" },  // 🔥 MOVED HERE
+    ],
+  },
+  
+  // 🔥 CAFETERIA DROPDOWN
+  {
+    title: "Cafeteria",
+    children: [
+      { name: "Cafeteria Sales", path: "/sales" },
+      { name: "Cafeteria Expense", path: "/cafeteriaexpense" },
+    ],
+  },
+  
+  {
+    title: "Income",
+    children: [
+      { name: "Other Income", path: "/otherincome" },
+    ],
+  },
+  { title: "Stock Management", path: "/stockmanage" },
+  {
+    title: "Operations",
+    children: [
+      { name: "Laundry", path: "/laundry" },
+      { name: "Room Cleaning", path: "/cleaning" },
+    ],
+  },
+  
+  // 🔥 LEDGER + DAYBOOK DROPDOWN
+  {
+    title: "Accounts",
+    children: [
+      { name: "Daybook", path: "/daybook" },
+      { name: "Ledger", path: "/ledger" },
+    ],
+  },
+  
+  // Staff Creation: visible ONLY if role is "ADMIN"
+  ...(role === "ADMIN" ? [{ title: "Staff Creation", path: "/staffcreation" }] : []),
+  
+  {
+    title: "Reports",
+    children: [
+      { name: "Income Reports", path: "/incomereports" },
+      { name: "Expense Reports", path: "/expensereports" },
+    ],
+  },
+];
+
   // -----------------------------------------------------------
 
 
