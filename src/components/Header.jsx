@@ -87,11 +87,11 @@ const Header = (props) => {
     
     // 🔥 EXPENSES DROPDOWN (Salary Expense moved here)
     {
-      title: "Expenses",
-      children: [
-        { name: "General Expenses", path: "/expenses" },
-        { name: "Salary Expense", path: "/salaryexpense" },
-      ],
+      title: "Expenses",path:"/expenses"
+      // children: [
+      //   { name: "General Expenses", path: "/expenses" },
+      //   { name: "Salary Expense", path: "/salaryexpense" },
+      // ],
     },
     
     // 🔥 CAFETERIA DROPDOWN
